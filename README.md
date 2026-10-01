@@ -1,6 +1,6 @@
 # RTS Command Deck
 
-A StarCraft-inspired sound effects board. Chunky console keys press down and light up as they play. It has hotkeys and quick filters, every key can play your own sound file, and your board and clips can sync across devices through Vercel Blob.
+A StarCraft-inspired sound effects board. Chunky console keys press down and light up as they play. It has hotkeys and quick filters, every key can play your own sound file, and your keys (stored in a Postgres database) and clips (stored in Vercel Blob) can sync across devices.
 
 ## Run it locally
 
@@ -20,18 +20,21 @@ At vercel.com/new, import this GitHub repo. Leave Framework Preset on **Other** 
 
 ## Set up cloud storage
 
-Without these steps the board still works; clips just stay in each browser.
+Without these steps the board still works; keys and clips just stay in each browser.
 
-1. **Create a Blob store.** In the Vercel project, open **Storage → Create Database → Blob**. Choose **Private** access and connect it to the project for all environments. This adds the store credentials automatically (`BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN` on older connections).
-2. **Set a passcode.** Under **Settings → Environment Variables**, add `DECK_PASSWORD` with a passcode of your choice, for all environments.
-3. **Redeploy** so the functions pick up both variables (Deployments → ⋯ → Redeploy).
-4. **Connect.** On the site, click **Cloud**, enter the passcode and click **Connect**. Repeat on each device.
+1. **Create a database for the keys.** In the Vercel project, open **Storage → Create Database → Neon** (Postgres) and connect it to the project for all environments. This adds `DATABASE_URL` automatically (`POSTGRES_URL` also works). The tables are created on first use; `db/schema.sql` documents them.
+2. **Create a Blob store for the clips.** In the Vercel project, open **Storage → Create Database → Blob**. Choose **Private** access and connect it to the project for all environments. This adds the store credentials automatically (`BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN` on older connections).
+3. **Set a passcode.** Under **Settings → Environment Variables**, add `DECK_PASSWORD` with a passcode of your choice, for all environments.
+4. **Redeploy** so the functions pick up the new variables (Deployments → ⋯ → Redeploy).
+5. **Connect.** On the site, click **Cloud**, enter the passcode and click **Connect**. Repeat on each device.
 
 If you created the Blob store with **Public** access instead, also set `DECK_BLOB_ACCESS=public`. Private is recommended: clips are only served through the app, to someone who has the passcode.
 
 ### How sync works
 
-- The whole board (keys, hotkeys, colours, volumes and which clip each key uses) is one `layout.json` in the store. Every change saves it, and the last save wins.
+- Each key is a row in the `deck_keys` table: label, faction, sound (synth preset, spoken line or clip), hotkey, colour, volume, pitch, favourite and which clip it uses, in board order. The master volume and last-saved time are in `deck_settings`.
+- Every change sends the board; the server updates changed keys, adds new ones and deletes removed ones in one transaction. Keys that didn't change are left alone. The last save wins.
+- A board saved before the database existed (`layout.json` in Blob storage) is imported automatically the first time the database is read while empty.
 - Each uploaded clip is stored once under `clips/`. Replacing a key's clip, switching the key back to a built-in sound, or removing the key deletes its clip from the store when no other key uses it.
 - Clips are also cached in the browser (IndexedDB), so playback is instant and works offline. A new device downloads them in the background after connecting.
 - The cloud limit is **4 MB per clip**, set by Vercel's 4.5 MB request size for functions. Larger files still work but stay in the browser that added them.
@@ -44,8 +47,8 @@ All routes require the passcode in an `x-deck-pass` header.
 
 | Route | Purpose |
 |-------|---------|
-| `GET /api/layout` | Saved board: `{ layout: { pads, master } \| null, savedAt }` |
-| `PUT /api/layout` | Save the board (JSON body `{ pads, master }`) |
+| `GET /api/layout` | Saved board from the database: `{ layout: { pads, master } \| null, savedAt }` |
+| `PUT /api/layout` | Save the board to the database (JSON body `{ pads, master }`, up to 500 keys) |
 | `POST /api/clips` | Upload one clip: raw audio body, `Content-Type: audio/*`, `X-File-Name` header → `{ path }` |
 | `GET /api/clips?path=clips/…` | Stream one clip |
 | `GET /api/clips` | List stored clips |
@@ -62,14 +65,16 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 | File | Purpose |
 |------|---------|
 | `index.html` | The app: markup, styles and script |
-| `api/layout.js` | Load and save the board in Blob storage |
+| `api/layout.js` | Load and save the board's keys in Postgres |
+| `api/_db.js` | Database connection, table setup and key ↔ row mapping (not a route) |
+| `db/schema.sql` | Table definitions for reference |
 | `api/clips.js` | Upload, stream, list and delete clips in Blob storage |
 | `api/_lib.js` | Passcode check and shared helpers (not a route) |
 | `sw.js` | Service worker for offline use |
 | `manifest.webmanifest` | App name, colours and icons for install |
 | `icons/` | App icon (SVG source plus 192 and 512 px PNGs) |
 | `vercel.json` | Headers and URL settings for Vercel |
-| `package.json` | `@vercel/blob` dependency and dev/deploy scripts |
+| `package.json` | `@vercel/blob` and `@neondatabase/serverless` dependencies, dev/deploy scripts |
 
 ## Features
 
@@ -88,7 +93,7 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 ## Where your data lives
 
 - **In the browser:** clips in IndexedDB (database `rtsdeck`, store `clips`); the board in localStorage (`rtsdeck.v1`); the cloud passcode in localStorage (`rtsdeck.cloud`).
-- **In the cloud (when connected):** `layout.json` and `clips/…` in this project's Blob store.
+- **In the cloud (when connected):** keys in the `deck_keys` and `deck_settings` tables of this project's Neon database; clips under `clips/…` in its Blob store.
 
 ## About the sounds
 

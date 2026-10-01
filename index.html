@@ -311,7 +311,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
 <dialog id="cloud" aria-labelledby="cloud-title">
   <form id="cloud-form">
     <h2 id="cloud-title">Cloud sync</h2>
-    <p class="note">Saves your keys and uploaded clips in this site's private Vercel Blob storage, so they load on every device where you enter the passcode. Clips up to 4 MB each sync; larger ones stay in this browser.</p>
+    <p class="note">Saves your keys in this site's database and your uploaded clips in its private Blob storage, so they load on every device where you enter the passcode. Clips up to 4 MB each sync; larger ones stay in this browser.</p>
     <p class="note">When you connect a browser that has unsaved changes, those changes are saved to the cloud. Otherwise the board saved in the cloud replaces the one in this browser.</p>
     <div class="form" style="margin-top:14px">
       <label class="field full" for="cloud-pass"><span class="lbl">Passcode</span><input type="password" id="cloud-pass" autocomplete="current-password" placeholder="The DECK_PASSWORD you set in Vercel"></label>
@@ -416,7 +416,7 @@ function saveState(){
   if (cloud.pass) { cloud.dirty = true; persistCloud(); if (cloud.on) schedulePush(); }
 }
 
-/* cloud sync state (Vercel Blob via /api) */
+/* cloud sync state (keys in Postgres, clips in Vercel Blob, both via /api) */
 const CLOUD_KEY = 'rtsdeck.cloud';
 const CLOUD_MAX_BYTES = 4 * 1024 * 1024;
 const cloud = { pass: '', on: false, savedAt: null, dirty: false };
@@ -1054,7 +1054,7 @@ $('#bulk-file').addEventListener('change', async e => {
 });
 
 /* ================= cloud sync ================= */
-// The board (layout.json) and every uploaded clip are kept in this deployment's Vercel Blob store.
+// The board is kept as one database row per key (/api/layout) and every uploaded clip in Vercel Blob (/api/clips).
 // Clips are also cached in IndexedDB, so playback stays instant and works offline.
 async function api(path, opts = {}){
   let res;

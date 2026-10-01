@@ -16,16 +16,24 @@ export function send(res, status, data) {
 
 const digest = s => createHash('sha256').update(String(s)).digest();
 
-// Every route needs the passcode in the x-deck-pass header. Returns false after replying when it is missing or wrong.
-export function authorize(req, res) {
+export const hasBlob = () => !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+export const hasDb = () => !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+
+// Every route needs the passcode in the x-deck-pass header, plus the services it uses
+// (needs: { blob, db }). Returns false after replying when something is missing or wrong.
+export function authorize(req, res, needs = {}) {
   const expected = process.env.DECK_PASSWORD;
   if (!expected) {
     send(res, 503, { error: 'Cloud storage is not set up yet. Add DECK_PASSWORD under Settings → Environment Variables in Vercel, then redeploy.' });
     return false;
   }
   // Older store connections add BLOB_READ_WRITE_TOKEN; newer ones add BLOB_STORE_ID and authenticate with Vercel's OIDC token.
-  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+  if (needs.blob && !hasBlob()) {
     send(res, 503, { error: 'Cloud storage is not set up yet. Connect a Blob store to this project under Storage in Vercel (all environments), then redeploy.' });
+    return false;
+  }
+  if (needs.db && !hasDb()) {
+    send(res, 503, { error: 'The key database is not set up yet. Add a Neon Postgres database to this project under Storage in Vercel (all environments), then redeploy.' });
     return false;
   }
   if (!timingSafeEqual(digest(req.headers['x-deck-pass'] || ''), digest(expected))) {
@@ -60,6 +68,9 @@ export function fail(res, err) {
   const name = err && err.name ? err.name : 'Error';
   if (name === 'BlobStoreNotFoundError' || name === 'BlobAccessError' || /credentials|OIDC/i.test(String(err && err.message))) {
     return send(res, 503, { error: `Blob storage rejected the request: ${err.message} Check that the Blob store is connected to this project for all environments, that its access type matches DECK_BLOB_ACCESS (private by default), and redeploy.` });
+  }
+  if (/neon|postgres|database|relation|connect/i.test(String(err && err.message)) || err?.sourceError || err?.code?.length === 5) {
+    return send(res, 503, { error: `The key database rejected the request: ${err.message} Check that the Neon database is connected to this project for all environments, and redeploy.` });
   }
   return send(res, 500, { error: `Storage error: ${err && err.message ? err.message : 'unknown'}` });
 }

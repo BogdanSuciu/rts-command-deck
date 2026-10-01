@@ -21,7 +21,7 @@ function safeName(raw) {
 }
 
 export default async function handler(req, res) {
-  if (!authorize(req, res)) return;
+  if (!authorize(req, res, { blob: true })) return;
   const url = new URL(req.url, 'http://localhost');
 
   try {
