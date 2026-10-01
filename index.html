@@ -188,7 +188,8 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
 .form{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px}
 .form .full{grid-column:1 / -1}
 .field{display:flex; flex-direction:column; gap:5px; min-width:0}
-.field input[type=text],.field select,.field textarea{
+.note.bad{color:var(--danger)}
+.field input[type=text],.field input[type=password],.field select,.field textarea{
   font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:8px 10px; width:100%;
 }
 .field textarea{font-family:var(--f-mono); font-size:12.5px; resize:vertical}
@@ -239,6 +240,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       <button class="key" id="edit" aria-pressed="false" style="--lamp:var(--hazard)"><span class="lamp"></span>Edit mode</button>
       <button class="key primary" id="bulk-btn" title="Choose several audio files at once">Load clips</button>
       <input type="file" id="bulk-file" accept="audio/*" multiple hidden>
+      <button class="key" id="cloud-btn" aria-pressed="false" style="--lamp:var(--protoss)"><span class="lamp"></span><span class="txt">Cloud</span></button>
       <button class="key" id="layout-btn">Layout</button>
     </div>
   </header>
@@ -305,6 +307,25 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
     <span class="spacer"></span>
     <button type="button" class="key" id="lay-close">Close</button>
   </div>
+</dialog>
+
+<dialog id="cloud" aria-labelledby="cloud-title">
+  <form id="cloud-form">
+    <h2 id="cloud-title">Cloud sync</h2>
+    <p class="note">Saves your keys and uploaded clips in this site's private Vercel Blob storage, so they load on every device where you enter the passcode. Clips up to 4 MB each sync; larger ones stay in this browser.</p>
+    <p class="note">When you connect a browser that has unsaved changes, those changes are saved to the cloud. Otherwise the board saved in the cloud replaces the one in this browser.</p>
+    <div class="form" style="margin-top:14px">
+      <label class="field full" for="cloud-pass"><span class="lbl">Passcode</span><input type="password" id="cloud-pass" autocomplete="current-password" placeholder="The DECK_PASSWORD you set in Vercel"></label>
+      <div class="field full"><span class="lbl">Status</span><span class="val" id="cloud-state">Off</span></div>
+    </div>
+    <p class="note" id="cloud-msg" hidden></p>
+    <div class="row">
+      <button type="submit" class="key primary" id="cloud-connect">Connect</button>
+      <button type="button" class="key danger" id="cloud-off" hidden>Disconnect</button>
+      <span class="spacer"></span>
+      <button type="button" class="key" id="cloud-close">Close</button>
+    </div>
+  </form>
 </dialog>
 
 <div class="toast" id="toast" hidden></div>
@@ -377,8 +398,29 @@ function loadState(){
   } catch (e) { /* storage unavailable */ }
   if (!state.pads.length) state.pads = structuredClone(DEFAULT_PADS);
 }
-function saveState(){
+function localSave(){
   try { localStorage.setItem(STORE_KEY, JSON.stringify({ pads: state.pads, master: state.master })); } catch (e) {}
+}
+function saveState(){
+  localSave();
+  if (cloud.pass) { cloud.dirty = true; persistCloud(); if (cloud.on) schedulePush(); }
+}
+
+/* cloud sync state (Vercel Blob via /api) */
+const CLOUD_KEY = 'rtsdeck.cloud';
+const CLOUD_MAX_BYTES = 4 * 1024 * 1024;
+const cloud = { pass: '', on: false, savedAt: null, dirty: false };
+function loadCloud(){
+  try {
+    const c = JSON.parse(localStorage.getItem(CLOUD_KEY) || 'null');
+    if (c && typeof c.pass === 'string') Object.assign(cloud, { pass: c.pass, savedAt: c.savedAt || null, dirty: !!c.dirty });
+  } catch (e) {}
+}
+function persistCloud(){
+  try {
+    if (cloud.pass) localStorage.setItem(CLOUD_KEY, JSON.stringify({ pass: cloud.pass, savedAt: cloud.savedAt, dirty: cloud.dirty }));
+    else localStorage.removeItem(CLOUD_KEY);
+  } catch (e) {}
 }
 function normalizePad(p){
   if (!p || typeof p !== 'object' || !p.name) return null;
@@ -393,6 +435,7 @@ function normalizePad(p){
     vol: clampNum(p.vol, 0, 1.5, 1), pitch: clampNum(p.pitch, 0.5, 2, 1),
     color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '', fav: !!p.fav,
     prevKind: ['synth','voice'].includes(p.prevKind) ? p.prevKind : '',
+    cloudPath: /^clips\/[\w.\- ]+$/.test(p.cloudPath || '') ? p.cloudPath : '',
   };
 }
 function clampNum(v, lo, hi, d){ v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; }
@@ -586,6 +629,11 @@ async function play(pad){
       let blob = null, key = pad.fileId;
       if (pad._pending && pendingClip) { blob = pendingClip.blob; key = 'pending'; }
       else if (pad.fileId) blob = await getClip(pad.fileId);
+      if (!blob && !pad._pending && pad.cloudPath && cloud.on) {
+        setLCD('▼ Loading ' + pad.name, 'Fetching clip from cloud storage');
+        blob = await cloudFetch(pad.cloudPath);
+        if (blob && pad.fileId) putClip(pad.fileId, blob);
+      }
       if (!blob) { toast(`“${pad.name}” has no audio file in this browser. Open Edit mode and choose one.`); PRESETS.error.fn(out, t, 1); dur = .4; }
       else {
         const buf = await decodeBlob(key, blob);
@@ -872,7 +920,7 @@ function resetDelete(){ delArmed = false; $('#ed-del').textContent = 'Delete'; }
 $('#ed-del').addEventListener('click', async () => {
   if (!delArmed) { delArmed = true; $('#ed-del').textContent = 'Confirm delete'; return; }
   const p = state.pads.find(x => x.id === editing.id);
-  if (p && p.fileId && !state.pads.some(x => x !== p && x.fileId === p.fileId)) delClip(p.fileId);
+  if (p) releaseClip(p);
   state.pads = state.pads.filter(x => x.id !== editing.id);
   saveState(); render(); dlg.close(); toast(`Deleted “${editing.name}”.`);
 });
@@ -881,11 +929,13 @@ $('#ed-form').addEventListener('submit', async e => {
   const p = readForm();
   if (p.kind === 'voice' && !p.text) { edMsg('Type the words this key should speak.'); $('#ed-text').focus(); return; }
   if (p.kind === 'file' && !pendingClip && !p.fileId) { edMsg('Choose an audio file for this key.'); return; }
+  let upload = null;
   if (p.kind === 'file' && pendingClip) {
     const id = 'clip-' + uid();
     const stored = await putClip(id, pendingClip.blob);
-    if (p.fileId && !state.pads.some(x => x.id !== p.id && x.fileId === p.fileId)) delClip(p.fileId);
-    p.fileId = id; p.fileName = pendingClip.name;
+    releaseClip(p);
+    p.fileId = id; p.fileName = pendingClip.name; p.cloudPath = '';
+    upload = { id, blob: pendingClip.blob, name: pendingClip.name };
     if (!stored) toast('Saved for this visit only: this browser blocked clip storage, so the file will need re-adding next time.');
   }
   if (p.key) state.pads.forEach(x => { if (x.id !== p.id && x.key === p.key) x.key = ''; });
@@ -895,6 +945,7 @@ $('#ed-form').addEventListener('submit', async e => {
   pendingClip = null;
   saveState(); render(); dlg.close();
   toast(`Saved “${clean.name}”.`);
+  if (upload) queueUpload(upload.id, upload.blob, upload.name);
 });
 dlg.addEventListener('close', resetDelete);
 
@@ -911,12 +962,13 @@ async function assignClip(pad, file){
   if (file.size > 15 * 1024 * 1024) { toast(`“${file.name}” is over 15 MB. Pick a shorter clip.`); return; }
   const id = 'clip-' + uid();
   const stored = await putClip(id, file);
-  if (pad.fileId && !state.pads.some(x => x !== pad && x.fileId === pad.fileId)) delClip(pad.fileId);
+  releaseClip(pad);
   if (pad.kind !== 'file') pad.prevKind = pad.kind;
-  Object.assign(pad, { kind: 'file', fileId: id, fileName: file.name });
+  Object.assign(pad, { kind: 'file', fileId: id, fileName: file.name, cloudPath: '' });
   saveState(); render();
   toast(`“${pad.name}” now plays ${file.name}.${stored ? '' : ' This browser blocked storage, so it lasts for this visit only.'}`);
   trigger(pad);
+  queueUpload(id, file, file.name);
 }
 grid.addEventListener('click', e => {
   const up = e.target.closest('[data-up]');
@@ -924,8 +976,8 @@ grid.addEventListener('click', e => {
   const rv = e.target.closest('[data-revert]');
   if (rv) {
     const p = state.pads.find(x => x.id === rv.dataset.revert);
-    if (p.fileId && !state.pads.some(x => x !== p && x.fileId === p.fileId)) delClip(p.fileId);
-    Object.assign(p, { kind: p.prevKind || 'synth', fileId: '', fileName: '', prevKind: '' });
+    releaseClip(p);
+    Object.assign(p, { kind: p.prevKind || 'synth', fileId: '', fileName: '', prevKind: '', cloudPath: '' });
     saveState(); render(); toast(`“${p.name}” is back to its built-in sound.`);
   }
 });
@@ -966,9 +1018,9 @@ $('#bulk-file').addEventListener('change', async e => {
     const hit = s => { const pn = norm(s || ''); return pn.length >= 4 && (n.includes(pn) || pn.includes(n)); };
     const match = n.length >= 4 && state.pads.find(p => hit(p.name) || hit(p.text));
     if (match) {
-      if (match.fileId && !state.pads.some(x => x !== match && x.fileId === match.fileId)) delClip(match.fileId);
+      releaseClip(match);
       if (match.kind !== 'file') match.prevKind = match.kind;
-      Object.assign(match, { kind:'file', fileId:id, fileName:f.name });
+      Object.assign(match, { kind:'file', fileId:id, fileName:f.name, cloudPath:'' });
       replaced++;
     } else {
       const faction = /terran|marine|scv|tank|nuke|ghost|cruiser/.test(n) ? 'terran' : /protoss|zealot|probe|pylon|carrier|templar/.test(n) ? 'protoss' : /zerg|drone|larva|overlord|hydra|ling|muta/.test(n) ? 'zerg' : 'neutral';
@@ -978,6 +1030,155 @@ $('#bulk-file').addEventListener('change', async e => {
   }
   saveState(); render();
   toast(`Loaded ${files.length} clip${files.length > 1 ? 's' : ''}: ${replaced} replaced matching keys, ${added} added as new keys.${memOnly ? ' This browser blocked storage, so they last for this visit only.' : ''}`);
+  uploadMissing();
+});
+
+/* ================= cloud sync ================= */
+// The board (layout.json) and every uploaded clip are kept in this deployment's Vercel Blob store.
+// Clips are also cached in IndexedDB, so playback stays instant and works offline.
+async function api(path, opts = {}){
+  let res;
+  try { res = await fetch(path, { ...opts, headers: { 'x-deck-pass': cloud.pass, ...(opts.headers || {}) } }); }
+  catch (e) { throw new Error('Could not reach the server. Check your connection.'); }
+  if (res.status === 204) return null;
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.error) || (res.status === 404
+    ? 'This copy of the board has no storage server. Cloud sync works on the Vercel deployment.'
+    : `Server error ${res.status}.`));
+  return data;
+}
+async function cloudFetch(path){
+  try {
+    const res = await fetch('/api/clips?path=' + encodeURIComponent(path), { headers: { 'x-deck-pass': cloud.pass } });
+    return res.ok ? await res.blob() : null;
+  } catch (e) { return null; }
+}
+function cloudDelete(path){
+  if (!cloud.on || !path) return;
+  api('/api/clips?path=' + encodeURIComponent(path), { method: 'DELETE' }).catch(() => {});
+}
+// Drop a key's clip from this browser and from cloud storage, unless another key still uses it.
+function releaseClip(pad){
+  const others = state.pads.filter(x => x.id !== pad.id);
+  if (pad.fileId && !others.some(x => x.fileId === pad.fileId)) delClip(pad.fileId);
+  if (pad.cloudPath && !others.some(x => x.cloudPath === pad.cloudPath)) cloudDelete(pad.cloudPath);
+}
+
+const AUDIO_TYPES = { mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', oga:'audio/ogg', opus:'audio/ogg', m4a:'audio/mp4', aac:'audio/aac', flac:'audio/flac', webm:'audio/webm' };
+const audioType = (blob, name) => /^audio\//.test(blob.type) ? blob.type : AUDIO_TYPES[(String(name).match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase()] || 'audio/mpeg';
+
+let uploadChain = Promise.resolve();
+let uploadsPending = 0;
+const tooBigForCloud = new Set();
+function queueUpload(fileId, blob, name){
+  if (!cloud.on || !blob) return;
+  if (blob.size > CLOUD_MAX_BYTES) {
+    if (!tooBigForCloud.has(fileId)) { tooBigForCloud.add(fileId); toast(`“${name}” is over 4 MB, so it stays in this browser only. Export a smaller mp3 to sync it.`); }
+    return;
+  }
+  uploadsPending++; updateCloudUI();
+  uploadChain = uploadChain.then(async () => {
+    try {
+      if (!state.pads.some(p => p.fileId === fileId && !p.cloudPath)) return; // replaced or already synced meanwhile
+      const r = await api('/api/clips', { method: 'POST', headers: { 'content-type': audioType(blob, name), 'x-file-name': encodeURIComponent(name) }, body: blob });
+      let used = false;
+      state.pads.forEach(p => { if (p.fileId === fileId) { p.cloudPath = r.path; used = true; } });
+      if (used) saveState(); else cloudDelete(r.path);
+    } catch (e) {
+      setCloudMsg(`Upload of “${name}” failed: ${e.message} It is still saved in this browser; use Sync now to retry.`, true);
+      toast(`Cloud upload failed for “${name}”. It still plays from this browser.`);
+    } finally { uploadsPending--; updateCloudUI(); }
+  });
+}
+async function uploadMissing(){
+  if (!cloud.on) return;
+  const seen = new Set();
+  for (const p of state.pads) {
+    if (p.kind !== 'file' || !p.fileId || p.cloudPath || seen.has(p.fileId)) continue;
+    seen.add(p.fileId);
+    const blob = await getClip(p.fileId);
+    if (blob) queueUpload(p.fileId, blob, p.fileName || p.name);
+  }
+}
+async function prefetchClips(){
+  for (const p of state.pads) {
+    if (!cloud.on) return;
+    if (!p.cloudPath || !p.fileId || await getClip(p.fileId)) continue;
+    const blob = await cloudFetch(p.cloudPath);
+    if (blob) await putClip(p.fileId, blob);
+  }
+}
+
+let pushTimer = null;
+function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(() => pushLayout().catch(e => setCloudMsg('Saving to the cloud failed: ' + e.message, true)), 700); }
+async function pushLayout(){
+  clearTimeout(pushTimer);
+  const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master }) });
+  cloud.savedAt = r.savedAt; cloud.dirty = false; persistCloud(); updateCloudUI();
+}
+function applyRemote(r){
+  const pads = (r.layout.pads || []).map(normalizePad).filter(Boolean);
+  if (!pads.length) return false;
+  state.pads = pads;
+  if (typeof r.layout.master === 'number') state.master = r.layout.master;
+  cloud.savedAt = r.savedAt; cloud.dirty = false;
+  localSave(); persistCloud(); syncMaster(); render();
+  return true;
+}
+// Connect (or re-sync): unsaved local changes win; otherwise the newer cloud board replaces this browser's.
+async function connect(quiet){
+  if (!cloud.pass) return;
+  setCloudMsg('Connecting…');
+  try {
+    const r = await api('/api/layout');
+    cloud.on = true;
+    let note = 'Up to date.';
+    if (!r.layout || cloud.dirty) { await pushLayout(); note = r.layout ? 'Saved this browser’s changes to the cloud.' : 'Saved this board to the cloud for the first time.'; }
+    else if (r.savedAt !== cloud.savedAt && applyRemote(r)) note = 'Loaded the board from the cloud.';
+    persistCloud(); updateCloudUI();
+    setCloudMsg(note);
+    if (!quiet) toast('Cloud sync is on. ' + note);
+    await uploadMissing();
+    prefetchClips();
+  } catch (e) {
+    cloud.on = false; updateCloudUI();
+    setCloudMsg(e.message, true);
+    if (quiet) toast('Cloud sync is paused: ' + e.message);
+  }
+}
+// Pick up changes made on another device when this tab comes back into view.
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !cloud.on || cloud.dirty || uploadsPending) return;
+  try { const r = await api('/api/layout'); if (r.layout && r.savedAt !== cloud.savedAt && applyRemote(r)) { toast('Loaded changes made on another device.'); prefetchClips(); } } catch (e) {}
+});
+
+const cloudDlg = $('#cloud');
+function setCloudMsg(t, bad){ const m = $('#cloud-msg'); m.textContent = t || ''; m.hidden = !t; m.classList.toggle('bad', !!bad); }
+function updateCloudUI(){
+  const b = $('#cloud-btn');
+  b.setAttribute('aria-pressed', cloud.on);
+  b.querySelector('.txt').textContent = uploadsPending ? `Cloud ↑${uploadsPending}` : 'Cloud';
+  b.title = cloud.on ? `Cloud sync on${cloud.savedAt ? ', last saved ' + new Date(cloud.savedAt).toLocaleString() : ''}` : 'Cloud sync off';
+  $('#cloud-state').textContent = cloud.on
+    ? `Connected${cloud.savedAt ? ' · last saved ' + new Date(cloud.savedAt).toLocaleString() : ''}${uploadsPending ? ` · uploading ${uploadsPending} clip${uploadsPending > 1 ? 's' : ''}` : ''}`
+    : cloud.pass ? 'Not connected' : 'Off';
+  $('#cloud-off').hidden = !cloud.pass;
+  $('#cloud-connect').textContent = cloud.on ? 'Sync now' : 'Connect';
+}
+$('#cloud-btn').addEventListener('click', () => { $('#cloud-pass').value = cloud.pass; updateCloudUI(); cloudDlg.showModal(); if (!cloud.pass) $('#cloud-pass').focus(); });
+$('#cloud-close').addEventListener('click', () => cloudDlg.close());
+$('#cloud-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pass = $('#cloud-pass').value.trim();
+  if (!pass) { setCloudMsg('Enter the passcode you set as DECK_PASSWORD in Vercel.', true); return; }
+  if (pass !== cloud.pass) { cloud.pass = pass; cloud.on = false; }
+  await connect(false);
+});
+$('#cloud-off').addEventListener('click', () => {
+  Object.assign(cloud, { pass: '', on: false, savedAt: null, dirty: false });
+  persistCloud(); updateCloudUI(); $('#cloud-pass').value = '';
+  setCloudMsg('Disconnected. This browser keeps its current board and clips; nothing was deleted from the cloud.');
 });
 
 /* ================= layout dialog ================= */
@@ -1010,9 +1211,12 @@ $('#lay-reset').addEventListener('click', () => {
 
 /* ================= boot ================= */
 loadState();
+loadCloud();
 fillSelects();
 syncMaster();
 render();
+updateCloudUI();
+if (cloud.pass) connect(true);
 })();
 </script>
 <script>

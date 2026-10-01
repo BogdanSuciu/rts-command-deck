@@ -1,10 +1,18 @@
 {
   "name": "rts-command-deck",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
+  "type": "module",
   "description": "StarCraft-inspired soundboard with physical console keys, quick filters and per-key custom sounds.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "npx --yes serve@14 -l 3000 .",
+    "dev": "npx --yes vercel@latest dev",
+    "dev:static": "npx --yes serve@14 -l 3000 .",
     "deploy": "npx --yes vercel@latest --prod"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
   }
 }
