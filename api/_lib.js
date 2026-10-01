@@ -23,8 +23,9 @@ export function authorize(req, res) {
     send(res, 503, { error: 'Cloud storage is not set up yet. Add DECK_PASSWORD under Settings → Environment Variables in Vercel, then redeploy.' });
     return false;
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    send(res, 503, { error: 'Cloud storage is not set up yet. Connect a Blob store to this project under Storage in Vercel, then redeploy.' });
+  // Older store connections add BLOB_READ_WRITE_TOKEN; newer ones add BLOB_STORE_ID and authenticate with Vercel's OIDC token.
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+    send(res, 503, { error: 'Cloud storage is not set up yet. Connect a Blob store to this project under Storage in Vercel (all environments), then redeploy.' });
     return false;
   }
   if (!timingSafeEqual(digest(req.headers['x-deck-pass'] || ''), digest(expected))) {
@@ -57,8 +58,8 @@ export function fail(res, err) {
   if (err && err.status === 413) return send(res, 413, { error: 'That file is over 4 MB. Trim it or export a smaller mp3.' });
   console.error(err);
   const name = err && err.name ? err.name : 'Error';
-  if (name === 'BlobStoreNotFoundError' || name === 'BlobAccessError') {
-    return send(res, 503, { error: `Blob storage rejected the request (${name}). Check that a Blob store is connected and that its access type matches DECK_BLOB_ACCESS (private by default).` });
+  if (name === 'BlobStoreNotFoundError' || name === 'BlobAccessError' || /credentials|OIDC/i.test(String(err && err.message))) {
+    return send(res, 503, { error: `Blob storage rejected the request: ${err.message} Check that the Blob store is connected to this project for all environments, that its access type matches DECK_BLOB_ACCESS (private by default), and redeploy.` });
   }
   return send(res, 500, { error: `Storage error: ${err && err.message ? err.message : 'unknown'}` });
 }

@@ -22,7 +22,7 @@ At vercel.com/new, import this GitHub repo. Leave Framework Preset on **Other** 
 
 Without these steps the board still works; clips just stay in each browser.
 
-1. **Create a Blob store.** In the Vercel project, open **Storage → Create Database → Blob**. Choose **Private** access and connect it to the project for all environments. This adds `BLOB_READ_WRITE_TOKEN` automatically.
+1. **Create a Blob store.** In the Vercel project, open **Storage → Create Database → Blob**. Choose **Private** access and connect it to the project for all environments. This adds the store credentials automatically (`BLOB_STORE_ID`, or `BLOB_READ_WRITE_TOKEN` on older connections).
 2. **Set a passcode.** Under **Settings → Environment Variables**, add `DECK_PASSWORD` with a passcode of your choice, for all environments.
 3. **Redeploy** so the functions pick up both variables (Deployments → ⋯ → Redeploy).
 4. **Connect.** On the site, click **Cloud**, enter the passcode and click **Connect**. Repeat on each device.
