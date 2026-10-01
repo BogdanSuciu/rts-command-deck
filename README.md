@@ -2,9 +2,39 @@
 
 A StarCraft-inspired sound effects board in a single HTML file. Chunky console keys press down and light up as they play. It has hotkeys and quick filters, and every key can play your own sound file.
 
-## Run it
+## Run it locally
 
-Open `index.html` in a browser. There is no build step and nothing to install. To host it, put `index.html` on any static host (GitHub Pages, Netlify, Vercel).
+```bash
+npm run dev      # serves the folder at http://localhost:3000
+```
+
+There is no build step and no dependencies. You can also open `index.html` directly, though offline support and app install only work over http(s).
+
+## Deploy to Vercel
+
+The repo is a static site; Vercel serves it as is.
+
+- **From the dashboard:** at vercel.com/new, import this GitHub repo. Leave Framework Preset on **Other** with no build command and no output directory, then deploy. Every push to `main` redeploys.
+- **From the command line:** `npm run deploy` (runs `vercel --prod` and asks you to log in the first time).
+
+`vercel.json` sets security headers, keeps `sw.js` and the manifest uncached so updates reach users, and caches icons for a week.
+
+## Install as an app
+
+The site is a Progressive Web App. In Chrome or Edge, use the install icon in the address bar. On iPhone or iPad, use Share → Add to Home Screen. Once installed it opens in its own window and works offline. Fonts are cached after the first online visit.
+
+When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installed copies fetch the new files.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `index.html` | The whole app: markup, styles and script |
+| `sw.js` | Service worker for offline use |
+| `manifest.webmanifest` | App name, colours and icons for install |
+| `icons/` | App icon (SVG source plus 192 and 512 px PNGs) |
+| `vercel.json` | Headers and URL settings for Vercel |
+| `package.json` | `dev` and `deploy` scripts only |
 
 ## Features
 
