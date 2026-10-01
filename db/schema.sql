@@ -16,9 +16,11 @@ CREATE TABLE IF NOT EXISTS deck_keys (
   pitch       real        NOT NULL DEFAULT 1,
   color       text        NOT NULL DEFAULT '',   -- '' = faction colour
   favorite    boolean     NOT NULL DEFAULT false,
-  file_id     text        NOT NULL DEFAULT '',   -- browser cache id of the uploaded clip
+  clips       jsonb       NOT NULL DEFAULT '[]', -- uploaded clips in play order: [{ fileId, name, path }] (path = Blob clips/…)
+  play_mode   text        NOT NULL DEFAULT 'order', -- order | random, when a key has several clips
+  file_id     text        NOT NULL DEFAULT '',   -- legacy single clip (before multi-clip keys); read, no longer written
   file_name   text        NOT NULL DEFAULT '',
-  clip_path   text        NOT NULL DEFAULT '',   -- Blob pathname of the uploaded clip (clips/…)
+  clip_path   text        NOT NULL DEFAULT '',
   prev_kind   text        NOT NULL DEFAULT '',
   updated_at  timestamptz NOT NULL DEFAULT now()
 );

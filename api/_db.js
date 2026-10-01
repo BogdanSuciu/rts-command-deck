@@ -23,6 +23,9 @@ export function ensureSchema() {
           clip_path text NOT NULL DEFAULT '', prev_kind text NOT NULL DEFAULT '', updated_at timestamptz NOT NULL DEFAULT now())`,
       q`CREATE TABLE IF NOT EXISTS deck_settings (
           id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), master real NOT NULL DEFAULT 0.8, saved_at timestamptz NOT NULL DEFAULT now())`,
+      // Multiple clips per key (added later; tables created before this get the columns here).
+      q`ALTER TABLE deck_keys ADD COLUMN IF NOT EXISTS clips jsonb NOT NULL DEFAULT '[]'::jsonb`,
+      q`ALTER TABLE deck_keys ADD COLUMN IF NOT EXISTS play_mode text NOT NULL DEFAULT 'order'`,
     ]).catch(err => { ready = null; throw err; });
   }
   return ready;
@@ -30,6 +33,16 @@ export function ensureSchema() {
 
 const FACTIONS = new Set(['terran', 'protoss', 'zerg']);
 const KINDS = new Set(['synth', 'voice', 'file']);
+const CLIP_PATH = /^clips\/[\w.\- ]+$/;
+const MAX_CLIPS = 20;
+
+// A key's clips in play order: [{ fileId, name, path }]. Accepts the older single-clip fields too.
+function cleanClips(p) {
+  const list = Array.isArray(p.clips) ? p.clips : p.fileId ? [{ fileId: p.fileId, name: p.fileName, path: p.cloudPath }] : [];
+  return list.filter(c => c && c.fileId).slice(0, MAX_CLIPS).map(c => ({
+    fileId: str(c.fileId, 64), name: str(c.name || 'clip', 120), path: CLIP_PATH.test(c.path || '') ? c.path : '',
+  }));
+}
 const str = (v, max) => String(v ?? '').slice(0, max);
 const num = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 
@@ -43,18 +56,21 @@ export function toRow(p, position) {
     preset: str(p.preset, 32), line: str(p.text, 160), hotkey: str(p.key, 12).toLowerCase(),
     volume: num(p.vol, 0, 1.5, 1), pitch: num(p.pitch, 0.5, 2, 1),
     color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '', favorite: !!p.fav,
-    file_id: str(p.fileId, 64), file_name: str(p.fileName, 120),
-    clip_path: /^clips\/[\w.\- ]+$/.test(p.cloudPath || '') ? p.cloudPath : '',
-    prev_kind: p.prevKind === 'synth' || p.prevKind === 'voice' ? p.prevKind : '',
+    clips: JSON.stringify(cleanClips(p)), play_mode: p.playMode === 'random' ? 'random' : 'order',
+    // Single-clip columns from before multi-clip support; kept empty on new writes.
+    file_id: '', file_name: '', clip_path: '', prev_kind: '',
   };
 }
 
 // A row → the page's key object.
-export const toPad = r => ({
-  id: r.id, name: r.name, faction: r.faction, kind: r.kind, preset: r.preset, text: r.line, key: r.hotkey,
-  vol: r.volume, pitch: r.pitch, color: r.color, fav: r.favorite,
-  fileId: r.file_id, fileName: r.file_name, cloudPath: r.clip_path, prevKind: r.prev_kind,
-});
+export function toPad(r) {
+  let clips = typeof r.clips === 'string' ? JSON.parse(r.clips) : r.clips || [];
+  if (!clips.length && r.file_id) clips = [{ fileId: r.file_id, name: r.file_name, path: r.clip_path }]; // row from before multi-clip
+  return {
+    id: r.id, name: r.name, faction: r.faction, kind: r.kind, preset: r.preset, text: r.line, key: r.hotkey,
+    vol: r.volume, pitch: r.pitch, color: r.color, fav: r.favorite, clips, playMode: r.play_mode || 'order',
+  };
+}
 
 export async function readBoard() {
   const q = db();
@@ -78,23 +94,27 @@ export async function writeBoard(pads, master) {
   const q = db();
   const results = await q.transaction([
     q`DELETE FROM deck_keys WHERE NOT (id = ANY(${col('id')}::text[]))`,
-    q`INSERT INTO deck_keys (id, position, name, faction, kind, preset, line, hotkey, volume, pitch, color, favorite, file_id, file_name, clip_path, prev_kind)
-      SELECT * FROM unnest(
+    q`INSERT INTO deck_keys (id, position, name, faction, kind, preset, line, hotkey, volume, pitch, color, favorite, file_id, file_name, clip_path, prev_kind, clips, play_mode)
+      SELECT u.id, u.position, u.name, u.faction, u.kind, u.preset, u.line, u.hotkey, u.volume, u.pitch, u.color, u.favorite,
+             u.file_id, u.file_name, u.clip_path, u.prev_kind, u.clips::jsonb, u.play_mode
+      FROM unnest(
         ${col('id')}::text[], ${col('position')}::int[], ${col('name')}::text[], ${col('faction')}::text[], ${col('kind')}::text[],
         ${col('preset')}::text[], ${col('line')}::text[], ${col('hotkey')}::text[], ${col('volume')}::real[], ${col('pitch')}::real[],
         ${col('color')}::text[], ${col('favorite')}::boolean[], ${col('file_id')}::text[], ${col('file_name')}::text[],
-        ${col('clip_path')}::text[], ${col('prev_kind')}::text[])
+        ${col('clip_path')}::text[], ${col('prev_kind')}::text[], ${col('clips')}::text[], ${col('play_mode')}::text[])
+        AS u(id, position, name, faction, kind, preset, line, hotkey, volume, pitch, color, favorite, file_id, file_name, clip_path, prev_kind, clips, play_mode)
       ON CONFLICT (id) DO UPDATE SET
         position = EXCLUDED.position, name = EXCLUDED.name, faction = EXCLUDED.faction, kind = EXCLUDED.kind,
         preset = EXCLUDED.preset, line = EXCLUDED.line, hotkey = EXCLUDED.hotkey, volume = EXCLUDED.volume,
         pitch = EXCLUDED.pitch, color = EXCLUDED.color, favorite = EXCLUDED.favorite, file_id = EXCLUDED.file_id,
-        file_name = EXCLUDED.file_name, clip_path = EXCLUDED.clip_path, prev_kind = EXCLUDED.prev_kind, updated_at = now()
+        file_name = EXCLUDED.file_name, clip_path = EXCLUDED.clip_path, prev_kind = EXCLUDED.prev_kind,
+        clips = EXCLUDED.clips, play_mode = EXCLUDED.play_mode, updated_at = now()
       WHERE (deck_keys.position, deck_keys.name, deck_keys.faction, deck_keys.kind, deck_keys.preset, deck_keys.line,
              deck_keys.hotkey, deck_keys.volume, deck_keys.pitch, deck_keys.color, deck_keys.favorite, deck_keys.file_id,
-             deck_keys.file_name, deck_keys.clip_path, deck_keys.prev_kind)
+             deck_keys.file_name, deck_keys.clip_path, deck_keys.prev_kind, deck_keys.clips, deck_keys.play_mode)
         IS DISTINCT FROM (EXCLUDED.position, EXCLUDED.name, EXCLUDED.faction, EXCLUDED.kind, EXCLUDED.preset, EXCLUDED.line,
              EXCLUDED.hotkey, EXCLUDED.volume, EXCLUDED.pitch, EXCLUDED.color, EXCLUDED.favorite, EXCLUDED.file_id,
-             EXCLUDED.file_name, EXCLUDED.clip_path, EXCLUDED.prev_kind)`,
+             EXCLUDED.file_name, EXCLUDED.clip_path, EXCLUDED.prev_kind, EXCLUDED.clips, EXCLUDED.play_mode)`,
     q`INSERT INTO deck_settings (id, master, saved_at) VALUES (1, ${num(master, 0, 1, 0.8)}, now())
       ON CONFLICT (id) DO UPDATE SET master = EXCLUDED.master, saved_at = EXCLUDED.saved_at
       RETURNING saved_at`,

@@ -146,14 +146,6 @@ input[type=range]::-moz-range-thumb{width:14px; height:22px; border-radius:3px; 
 .pad .nm.long{font-size:13px; letter-spacing:0}
 .pad .mt{font-size:11.5px; color:var(--ink-dim); letter-spacing:.04em}
 .pad .mt b{font-weight:600; color:var(--led)}
-.well .up{
-  position:absolute; bottom:-9px; height:22px; border-radius:6px; border:1px solid var(--cap-edge); cursor:pointer; padding:0 8px;
-  background:linear-gradient(180deg,#2e363e,#1c2227); color:var(--ink-dim); font:600 10px/1 var(--f-display); letter-spacing:.08em;
-  text-transform:uppercase; box-shadow:0 2px 0 #040506;
-}
-.well .up{left:12px}
-.well .up:hover{color:var(--hazard)}
-.well .up.has{color:var(--lcd)}
 .well.drop{box-shadow:inset 0 3px 8px rgba(0,0,0,.9), 0 0 0 2px var(--hazard)}
 .well .star,.well .gear{
   position:absolute; bottom:-9px; width:26px; height:22px; border-radius:6px; border:1px solid var(--cap-edge); cursor:pointer;
@@ -185,6 +177,24 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
 .form .full{grid-column:1 / -1}
 .field{display:flex; flex-direction:column; gap:5px; min-width:0}
 .note.bad{color:var(--danger)}
+/* clip list in the key editor */
+.clips{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px}
+.clip-row{display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:8px; align-items:center; background:var(--well);
+  border:1px solid #2a323a; border-radius:7px; padding:6px 8px}
+.clip-n{font:12px var(--f-mono); color:var(--ink-faint); text-align:right}
+.clip-name{font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.clip-name em{font-style:normal; font:10px var(--f-mono); color:var(--lcd); margin-left:6px; text-transform:uppercase}
+.clip-acts{display:flex; gap:4px}
+.clip-empty{font-size:13px; color:var(--ink-dim); padding:8px 2px}
+.mini{font:600 11px/1 var(--f-display); letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); min-width:28px; height:26px;
+  padding:0 7px; border-radius:6px; border:1px solid var(--cap-edge); background:linear-gradient(180deg,#36404a,#232a31); cursor:pointer;
+  box-shadow:0 2px 0 #050708}
+.mini:hover:not(:disabled){color:var(--hazard)}
+.mini:disabled{opacity:.35; cursor:default}
+.mini.danger:hover{color:var(--danger)}
+.clip-tools{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px}
+.mini .narrow{display:none}
+@media (max-width:440px){ .mini .wide{display:none} .mini .narrow{display:inline} }
 .field input[type=text],.field input[type=password],.field select,.field textarea{
   font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:8px 10px; width:100%;
 }
@@ -270,14 +280,25 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
         <div class="seg" id="ed-kind" role="radiogroup" aria-label="Sound source">
           <button type="button" class="key" data-kind="synth" style="--lamp:var(--lcd)"><span class="lamp"></span>Synth preset</button>
           <button type="button" class="key" data-kind="voice" style="--lamp:var(--lcd)"><span class="lamp"></span>Voice line</button>
-          <button type="button" class="key" data-kind="file" style="--lamp:var(--lcd)"><span class="lamp"></span>Audio file</button>
+          <button type="button" class="key" data-kind="file" style="--lamp:var(--lcd)"><span class="lamp"></span>Audio clips</button>
         </div>
       </div>
       <label class="field full" for="ed-preset" data-for="synth"><span class="lbl">Preset</span><select id="ed-preset"></select></label>
       <label class="field full" for="ed-text" data-for="voice"><span class="lbl">Words to speak</span><textarea id="ed-text" rows="2" maxlength="160"></textarea></label>
-      <div class="field full" data-for="file"><label class="lbl" for="ed-file">Audio file (mp3, wav, ogg…)</label>
-        <input type="file" id="ed-file" accept="audio/*"><span class="note" id="ed-file-name"></span>
-        <span class="note">To go back to the built-in sound, pick Synth preset or Voice line above and save.</span></div>
+      <div class="field full" data-for="file">
+        <span class="lbl">Audio clips <span class="val" id="ed-clip-count"></span></span>
+        <ul class="clips" id="ed-clips"></ul>
+        <div class="clip-tools">
+          <button type="button" class="key" id="ed-add-clips">+ Add clips</button>
+          <span class="seg" id="ed-mode-row" role="radiogroup" aria-label="When the key has several clips">
+            <button type="button" class="key" data-mode="order" style="--lamp:var(--lcd)"><span class="lamp"></span>Play in order</button>
+            <button type="button" class="key" data-mode="random" style="--lamp:var(--lcd)"><span class="lamp"></span>Random</button>
+          </span>
+        </div>
+        <input type="file" id="ed-file" accept="audio/*" multiple hidden>
+        <input type="file" id="ed-file-replace" accept="audio/*" hidden>
+        <span class="note">mp3, wav, ogg or m4a, up to 20 clips per key. To go back to the built-in sound, pick Synth preset or Voice line above and save.</span>
+      </div>
       <label class="field" for="ed-key"><span class="lbl">Hotkey</span><input type="text" id="ed-key" readonly placeholder="Click, then press a key"></label>
       <label class="field" for="ed-color"><span class="lbl">Light color</span><input type="color" id="ed-color"></label>
       <label class="field" for="ed-vol"><span class="lbl">Volume <span class="val" id="ed-vol-val"></span></span><input type="range" id="ed-vol" min="0" max="1.5" step="0.05"></label>
@@ -368,7 +389,7 @@ const DEFAULT_PADS = [
   ['More overlords','zerg','voice','Spawn more overlords.','v'],
 ].map(([name,faction,kind,src,key],i) => ({
   id:'u'+i, name, faction, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
-  key, vol:1, pitch:1, color:'', fav:false,
+  clips: [], playMode: 'order', key, vol:1, pitch:1, color:'', fav:false,
 }));
 
 // Boards saved before the unit-lines set have default keys with ids d0…d30. Swap those for the
@@ -439,13 +460,21 @@ function normalizePad(p){
     faction: FACTIONS[p.faction] ? p.faction : 'terran',
     kind: ['synth','voice','file'].includes(p.kind) ? p.kind : 'synth',
     preset: PRESETS[p.preset] ? p.preset : 'click',
-    text: String(p.text || ''), fileId: p.fileId || '', fileName: p.fileName || '',
+    text: String(p.text || ''), clips: normalizeClips(p), playMode: p.playMode === 'random' ? 'random' : 'order',
     key: typeof p.key === 'string' ? p.key.toLowerCase().slice(0,12) : '',
     vol: clampNum(p.vol, 0, 1.5, 1), pitch: clampNum(p.pitch, 0.5, 2, 1),
     color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '', fav: !!p.fav,
-    prevKind: ['synth','voice'].includes(p.prevKind) ? p.prevKind : '',
-    cloudPath: /^clips\/[\w.\- ]+$/.test(p.cloudPath || '') ? p.cloudPath : '',
   };
+}
+// A key's uploaded clips, in play order: { fileId (browser cache id), name, path (cloud Blob path, '' until uploaded) }.
+// Keys saved before multi-clip support had a single fileId / fileName / cloudPath.
+const MAX_CLIPS = 20;
+const CLIP_PATH = /^clips\/[\w.\- ]+$/;
+function normalizeClips(p){
+  const list = Array.isArray(p.clips) ? p.clips : p.fileId ? [{ fileId: p.fileId, name: p.fileName, path: p.cloudPath }] : [];
+  return list.filter(c => c && c.fileId).slice(0, MAX_CLIPS).map(c => ({
+    fileId: String(c.fileId).slice(0, 64), name: String(c.name || 'clip').slice(0, 120), path: CLIP_PATH.test(c.path || '') ? c.path : '',
+  }));
 }
 function clampNum(v, lo, hi, d){ v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; }
 function uid(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
@@ -624,7 +653,18 @@ async function decodeBlob(key, blob){
   return buf;
 }
 
-let pendingClip = null; // { blob, name } while editing
+// Which clip a multi-clip key plays next: in order (cycling) or random (never the same one twice in a row).
+const playCursor = new Map();
+function nextClip(pad){
+  const n = pad.clips.length;
+  if (n <= 1) return pad.clips[0];
+  const last = playCursor.has(pad.id) ? playCursor.get(pad.id) : -1;
+  let i;
+  if (pad.playMode === 'random') { do { i = Math.floor(Math.random() * n); } while (i === last); }
+  else i = (last + 1) % n;
+  playCursor.set(pad.id, i);
+  return pad.clips[i];
+}
 
 async function play(pad){
   ac();
@@ -635,17 +675,19 @@ async function play(pad){
     if (pad.kind === 'synth') dur = (PRESETS[pad.preset] || PRESETS.click).fn(out, t, pad.pitch);
     else if (pad.kind === 'voice') { dur = speak(pad); PRESETS.radio.fn(out, t, 1); }
     else if (pad.kind === 'file') {
-      let blob = null, key = pad.fileId;
-      if (pad._pending && pendingClip) { blob = pendingClip.blob; key = 'pending'; }
-      else if (pad.fileId) blob = await getClip(pad.fileId);
-      if (!blob && !pad._pending && pad.cloudPath && cloud.on) {
+      const clip = pad._clip || nextClip(pad);
+      let blob = clip && (clip.blob || await getClip(clip.fileId));
+      if (clip && !blob && clip.path && cloud.on) {
         setLCD('▼ Loading ' + pad.name, 'Fetching clip from cloud storage');
-        blob = await cloudFetch(pad.cloudPath);
-        if (blob && pad.fileId) putClip(pad.fileId, blob);
+        blob = await cloudFetch(clip.path);
+        if (blob) putClip(clip.fileId, blob);
       }
-      if (!blob) { toast(`“${pad.name}” has no audio file in this browser. Use Upload under the key to choose one.`); PRESETS.error.fn(out, t, 1); dur = .4; }
-      else {
-        const buf = await decodeBlob(key, blob);
+      if (!blob) {
+        toast(clip ? `“${clip.name}” on “${pad.name}” isn't in this browser. Open ✎ on the key to add it again.` : `“${pad.name}” has no clips yet. Open ✎ on the key to add some.`);
+        PRESETS.error.fn(out, t, 1); dur = .4;
+      } else {
+        if (pad.clips.length > 1 && !pad._clip) setLCD('▶ ' + pad.name, `${clip.name} · ${pad.clips.indexOf(clip) + 1} of ${pad.clips.length}`);
+        const buf = await decodeBlob(clip.fileId, blob);
         const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = pad.pitch;
         src.connect(out); src.start(ctx.currentTime + 0.01);
         dur = buf.duration / pad.pitch;
@@ -712,6 +754,10 @@ function toast(msg, action){
   t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, action ? 8000 : 3600);
 }
 
+function clipSummary(p){
+  const n = p.clips.length;
+  return n > 1 ? `${n} clips, ${p.playMode === 'random' ? 'random' : 'in order'}` : n ? 'your clip' : 'no clips yet';
+}
 function padColor(p){ return p.color || FACTIONS[p.faction].hex; }
 function sourceLabel(p){ return p.kind === 'voice' ? 'Voice' : p.kind === 'file' ? 'Clip' : 'Synth'; }
 
@@ -720,7 +766,7 @@ function matches(p){
   if (state.favOnly && !p.fav) return false;
   if (state.clipsOnly && p.kind !== 'file') return false;
   if (state.q) {
-    const hay = [p.name, p.text, p.fileName, FACTIONS[p.faction].label, PRESETS[p.preset]?.label, p.kind === 'synth' ? '' : sourceLabel(p)].join(' ').toLowerCase();
+    const hay = [p.name, p.text, ...p.clips.map(c => c.name), FACTIONS[p.faction].label, PRESETS[p.preset]?.label, p.kind === 'synth' ? '' : sourceLabel(p)].join(' ').toLowerCase();
     if (!state.q.split(/\s+/).every(w => hay.includes(w))) return false;
   }
   return true;
@@ -744,9 +790,8 @@ function renderGrid(){
       <button class="pad" style="--led:${padColor(p)}" data-play="${esc(p.id)}" aria-label="${esc(p.name)}${p.key ? ', hotkey ' + esc(keyLabel(p.key)) : ''}">
         <span class="led"></span>${p.key ? `<span class="hk">${esc(keyLabel(p.key))}</span>` : ''}
         <span class="nm${/\S{12,}/.test(p.name) ? ' long' : ''}">${esc(p.name)}</span>
-        <span class="mt"><b>${FACTIONS[p.faction].label}</b>${p.kind === 'file' ? ' · your clip' : ''}</span>
+        <span class="mt"><b>${FACTIONS[p.faction].label}</b>${p.kind === 'file' ? ' · ' + clipSummary(p) : ''}</span>
       </button>
-      <button class="up${p.kind === 'file' ? ' has' : ''}" data-up="${esc(p.id)}" title="${p.kind === 'file' ? 'Playing ' + esc(p.fileName) + '. Click to replace, or drop a file on the key.' : 'Upload a sound file for this key, or drop one on it'}" aria-label="Upload sound file for ${esc(p.name)}">${p.kind === 'file' ? '♪ Clip' : '⇪ Upload'}</button>
       <button class="star" data-fav="${esc(p.id)}" aria-pressed="${p.fav}" aria-label="${p.fav ? 'Remove from' : 'Add to'} favorites: ${esc(p.name)}">★</button>
       <button class="gear" data-edit="${esc(p.id)}" title="Edit or remove this key" aria-label="Edit ${esc(p.name)}">✎</button>
     </div>`).join('');
@@ -847,16 +892,15 @@ function openEditor(id){
   const src = id ? state.pads.find(p => p.id === id) : null;
   editing = src ? { ...src } : {
     id: uid(), name: 'New key', faction: state.faction !== 'all' ? state.faction : 'terran',
-    kind: 'synth', preset: 'click', text: '', fileId: '', fileName: '', key: '', vol: 1, pitch: 1, color: '', fav: false, _new: true,
+    kind: 'synth', preset: 'click', text: '', clips: [], playMode: 'order', key: '', vol: 1, pitch: 1, color: '', fav: false, _new: true,
   };
-  pendingClip = null; bufCache.delete('pending');
+  edClips = editing.clips.map(c => ({ ...c }));
+  setMode(editing.playMode); renderClipList();
   $('#ed-title').textContent = src ? 'Edit key' : 'New key';
   $('#ed-name').value = editing.name;
   $('#ed-faction').value = editing.faction;
   $('#ed-preset').value = editing.preset;
   $('#ed-text').value = editing.text;
-  $('#ed-file').value = '';
-  $('#ed-file-name').textContent = editing.fileName ? `Current: ${editing.fileName}` : 'No file chosen yet.';
   $('#ed-key').value = keyLabel(editing.key);
   $('#ed-color').value = padColor(editing);
   $('#ed-vol').value = editing.vol; $('#ed-pitch').value = editing.pitch;
@@ -893,13 +937,69 @@ $('#ed-vol').addEventListener('input', syncEdVals);
 $('#ed-pitch').addEventListener('input', syncEdVals);
 $('#ed-faction').addEventListener('change', () => { if (!editing.color) $('#ed-color').value = FACTIONS[$('#ed-faction').value].hex; });
 $('#ed-color').addEventListener('input', () => { editing.color = $('#ed-color').value; });
+// Working copy of the key's clips while the editor is open. New files carry their blob until Save stores them.
+let edClips = [];
+let replaceAt = -1;
+const isAudio = f => /^audio\//.test(f.type) || /\.(mp3|wav|ogg|oga|m4a|aac|flac|webm|opus)$/i.test(f.name);
+// Split picked files into usable ones and a note about the rest.
+function vetFiles(files, room){
+  const ok = [], skipped = [];
+  for (const f of files) {
+    if (!isAudio(f)) skipped.push(`${f.name} (not audio)`);
+    else if (f.size > 15 * 1024 * 1024) skipped.push(`${f.name} (over 15 MB)`);
+    else if (ok.length >= room) skipped.push(`${f.name} (${MAX_CLIPS}-clip limit)`);
+    else ok.push(f);
+  }
+  return { ok, note: skipped.length ? 'Skipped: ' + skipped.join(', ') + '.' : '' };
+}
+const newClip = f => ({ fileId: 'clip-' + uid(), name: f.name.slice(0, 120), path: '', blob: f });
+function setMode(mode){
+  editing.playMode = mode === 'random' ? 'random' : 'order';
+  document.querySelectorAll('#ed-mode-row [data-mode]').forEach(b => { const on = b.dataset.mode === editing.playMode; b.setAttribute('aria-pressed', on); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', on); });
+}
+function renderClipList(){
+  const n = edClips.length;
+  $('#ed-clips').innerHTML = n ? edClips.map((c, i) => `
+    <li class="clip-row">
+      <span class="clip-n">${i + 1}</span>
+      <span class="clip-name" title="${esc(c.name)}">${esc(c.name)}${c.blob ? '<em>new</em>' : ''}</span>
+      <span class="clip-acts">
+        <button type="button" class="mini" data-clip-play="${i}" title="Play" aria-label="Play ${esc(c.name)}">▶</button>
+        <button type="button" class="mini" data-clip-up="${i}" title="Move up" aria-label="Move ${esc(c.name)} up" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="mini" data-clip-down="${i}" title="Move down" aria-label="Move ${esc(c.name)} down" ${i === n - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="mini" data-clip-replace="${i}" title="Replace with another file" aria-label="Replace ${esc(c.name)}"><span class="wide">Replace</span><span class="narrow">⇄</span></button>
+        <button type="button" class="mini danger" data-clip-remove="${i}" title="Remove" aria-label="Remove ${esc(c.name)}">✕</button>
+      </span>
+    </li>`).join('') : '<li class="clip-empty">No clips yet. Add one or more audio files; with several, the key plays them in order or at random.</li>';
+  $('#ed-clip-count').textContent = n ? `· ${n} of ${MAX_CLIPS}` : '';
+  $('#ed-mode-row').hidden = n < 2;
+  $('#ed-add-clips').disabled = n >= MAX_CLIPS;
+}
+$('#ed-add-clips').addEventListener('click', () => $('#ed-file').click());
+$('#ed-mode-row').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
 $('#ed-file').addEventListener('change', e => {
-  const f = e.target.files && e.target.files[0]; if (!f) return;
-  if (f.size > 15 * 1024 * 1024) { edMsg('That file is over 15 MB. Trim it or pick a shorter clip.'); e.target.value = ''; return; }
-  pendingClip = { blob: f, name: f.name }; bufCache.delete('pending');
-  $('#ed-file-name').textContent = `Selected: ${f.name}`;
-  if ($('#ed-name').value === 'New key') $('#ed-name').value = f.name.replace(/\.[^.]+$/, '').slice(0, 40);
-  edMsg('');
+  const { ok, note } = vetFiles([...(e.target.files || [])], MAX_CLIPS - edClips.length);
+  e.target.value = '';
+  edClips.push(...ok.map(newClip));
+  if (ok.length && $('#ed-name').value === 'New key') $('#ed-name').value = ok[0].name.replace(/\.[^.]+$/, '').slice(0, 40);
+  renderClipList(); edMsg(note);
+});
+$('#ed-file-replace').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f || replaceAt < 0 || !edClips[replaceAt]) return;
+  const { ok, note } = vetFiles([f], 1);
+  if (ok.length) edClips[replaceAt] = newClip(ok[0]);
+  replaceAt = -1; renderClipList(); edMsg(note);
+});
+$('#ed-clips').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset, i = Number(d.clipPlay ?? d.clipUp ?? d.clipDown ?? d.clipReplace ?? d.clipRemove);
+  if (d.clipPlay != null) { const p = readForm(); p.kind = 'file'; p.clips = edClips; p._clip = edClips[i]; trigger(p); }
+  else if (d.clipUp != null && i > 0) { [edClips[i - 1], edClips[i]] = [edClips[i], edClips[i - 1]]; renderClipList(); $(`[data-clip-up="${i - 1}"]`)?.focus(); }
+  else if (d.clipDown != null && i < edClips.length - 1) { [edClips[i + 1], edClips[i]] = [edClips[i], edClips[i + 1]]; renderClipList(); $(`[data-clip-down="${i + 1}"]`)?.focus(); }
+  else if (d.clipReplace != null) { replaceAt = i; $('#ed-file-replace').click(); }
+  else if (d.clipRemove != null) { edClips.splice(i, 1); renderClipList(); }
 });
 const keyInput = $('#ed-key');
 keyInput.addEventListener('keydown', e => {
@@ -919,7 +1019,7 @@ keyInput.addEventListener('blur', () => { keyInput.placeholder = 'Click, then pr
 
 $('#ed-test').addEventListener('click', () => {
   const p = readForm();
-  if (p.kind === 'file' && pendingClip) p._pending = true;
+  p.clips = edClips;
   trigger(p);
 });
 $('#ed-cancel').addEventListener('click', () => dlg.close());
@@ -952,61 +1052,49 @@ $('#ed-form').addEventListener('submit', async e => {
   e.preventDefault();
   const p = readForm();
   if (p.kind === 'voice' && !p.text) { edMsg('Type the words this key should speak.'); $('#ed-text').focus(); return; }
-  if (p.kind === 'file' && !pendingClip && !p.fileId) { edMsg('Choose an audio file for this key.'); return; }
-  let upload = null;
-  if (p.kind !== 'file' && p.fileId) { // switched back to a built-in sound: drop the uploaded clip
-    releaseClip(p);
-    Object.assign(p, { fileId: '', fileName: '', cloudPath: '', prevKind: '' });
+  if (p.kind === 'file' && !edClips.length) { edMsg('Add at least one audio clip, or pick Synth preset or Voice line.'); return; }
+  // Keep the clip list only for clip keys; switching to a built-in sound drops the clips.
+  const kept = p.kind === 'file' ? edClips : [];
+  const orig = state.pads.find(x => x.id === p.id);
+  if (orig) releaseClips(orig.clips.filter(c => !kept.some(k => k.fileId === c.fileId)), p.id);
+  const uploads = [];
+  let blocked = false;
+  for (const c of kept) {
+    if (!c.blob) continue;
+    if (!(await putClip(c.fileId, c.blob))) blocked = true;
+    uploads.push([c.fileId, c.blob, c.name]);
   }
-  if (p.kind === 'file' && pendingClip) {
-    const id = 'clip-' + uid();
-    const stored = await putClip(id, pendingClip.blob);
-    releaseClip(p);
-    p.fileId = id; p.fileName = pendingClip.name; p.cloudPath = '';
-    upload = { id, blob: pendingClip.blob, name: pendingClip.name };
-    if (!stored) toast('Saved for this visit only: this browser blocked clip storage, so the file will need re-adding next time.');
-  }
+  if (blocked) toast('Saved for this visit only: this browser blocked clip storage, so new clips will need re-adding next time.');
+  p.clips = kept.map(({ fileId, name, path }) => ({ fileId, name, path }));
+  playCursor.delete(p.id);
   if (p.key) state.pads.forEach(x => { if (x.id !== p.id && x.key === p.key) x.key = ''; });
   const clean = normalizePad(p);
   const idx = state.pads.findIndex(x => x.id === clean.id);
   if (idx >= 0) state.pads[idx] = clean; else state.pads.push(clean);
-  pendingClip = null;
   saveState(); render(); dlg.close();
   toast(`Saved “${clean.name}”.`);
-  if (upload) queueUpload(upload.id, upload.blob, upload.name);
+  uploads.forEach(u => queueUpload(...u));
 });
 
-/* ================= bulk clip loader ================= */
-// Files whose name matches a key's label replace that key's sound; the rest become new keys.
-/* per-key upload: button or drag-and-drop onto a key */
-const keyFile = document.createElement('input');
-keyFile.type = 'file'; keyFile.accept = 'audio/*'; keyFile.hidden = true; keyFile.id = 'key-file';
-document.body.append(keyFile);
-let uploadTarget = null;
-async function assignClip(pad, file){
-  if (!file) return;
-  if (!/^audio\//.test(file.type) && !/\.(mp3|wav|ogg|oga|m4a|aac|flac|webm|opus)$/i.test(file.name)) { toast(`“${file.name}” isn't an audio file. Use mp3, wav, ogg or m4a.`); return; }
-  if (file.size > 15 * 1024 * 1024) { toast(`“${file.name}” is over 15 MB. Pick a shorter clip.`); return; }
-  const id = 'clip-' + uid();
-  const stored = await putClip(id, file);
-  releaseClip(pad);
-  if (pad.kind !== 'file') pad.prevKind = pad.kind;
-  Object.assign(pad, { kind: 'file', fileId: id, fileName: file.name, cloudPath: '' });
+/* ================= dropping files on a key ================= */
+// Dropped audio files are added to the end of that key's clip list.
+async function addClipsToPad(pad, files){
+  const { ok, note } = vetFiles(files, MAX_CLIPS - pad.clips.length);
+  if (!ok.length) { toast(note || `“${pad.name}” already has ${MAX_CLIPS} clips.`); return; }
+  const added = [];
+  let blocked = false;
+  for (const f of ok) {
+    const c = newClip(f);
+    if (!(await putClip(c.fileId, f))) blocked = true;
+    added.push(c);
+  }
+  if (pad.kind !== 'file') pad.clips = [];
+  pad.kind = 'file';
+  pad.clips.push(...added.map(({ fileId, name, path }) => ({ fileId, name, path })));
   saveState(); render();
-  toast(`“${pad.name}” now plays ${file.name}.${stored ? '' : ' This browser blocked storage, so it lasts for this visit only.'}`);
-  trigger(pad);
-  queueUpload(id, file, file.name);
+  toast(`Added ${ok.length} clip${ok.length > 1 ? 's' : ''} to “${pad.name}” (${clipSummary(pad)}).${blocked ? ' This browser blocked storage, so they last for this visit only.' : ''}${note ? ' ' + note : ''}`);
+  added.forEach(c => queueUpload(c.fileId, c.blob, c.name));
 }
-grid.addEventListener('click', e => {
-  const up = e.target.closest('[data-up]');
-  if (up) { uploadTarget = up.dataset.up; keyFile.click(); return; }
-});
-keyFile.addEventListener('change', () => {
-  const pad = state.pads.find(p => p.id === uploadTarget);
-  const f = keyFile.files && keyFile.files[0];
-  keyFile.value = '';
-  if (pad && f) assignClip(pad, f);
-});
 grid.addEventListener('dragover', e => {
   const w = e.target.closest('.well[data-id]'); if (!w) return;
   e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
@@ -1018,14 +1106,16 @@ grid.addEventListener('drop', e => {
   const w = e.target.closest('.well[data-id]'); if (!w) return;
   e.preventDefault(); w.classList.remove('drop');
   const pad = state.pads.find(p => p.id === w.dataset.id);
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (pad && f) assignClip(pad, f);
+  const files = [...((e.dataTransfer && e.dataTransfer.files) || [])];
+  if (pad && files.length) addClipsToPad(pad, files);
 });
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());
 
 const norm = s =>String(s).toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, '');
 $('#bulk-btn').addEventListener('click', () => $('#bulk-file').click());
+/* ================= bulk clip loader ================= */
+// Files whose name matches a key's label or line are added to that key's clips; the rest become new keys.
 $('#bulk-file').addEventListener('change', async e => {
   const files = [...(e.target.files || [])].filter(f => f.size <= 15 * 1024 * 1024);
   e.target.value = '';
@@ -1037,19 +1127,19 @@ $('#bulk-file').addEventListener('change', async e => {
     if (!(await putClip(id, f))) memOnly = true;
     const hit = s => { const pn = norm(s || ''); return pn.length >= 4 && (n.includes(pn) || pn.includes(n)); };
     const match = n.length >= 4 && state.pads.find(p => hit(p.name) || hit(p.text));
-    if (match) {
-      releaseClip(match);
-      if (match.kind !== 'file') match.prevKind = match.kind;
-      Object.assign(match, { kind:'file', fileId:id, fileName:f.name, cloudPath:'' });
+    if (match && match.clips.length < MAX_CLIPS) {
+      if (match.kind !== 'file') match.clips = [];
+      match.kind = 'file';
+      match.clips.push({ fileId: id, name: f.name.slice(0, 120), path: '' });
       replaced++;
     } else {
       const faction = /terran|marine|scv|tank|nuke|ghost|cruiser/.test(n) ? 'terran' : /protoss|zealot|probe|pylon|carrier|templar/.test(n) ? 'protoss' : /zerg|drone|larva|overlord|hydra|ling|muta|ultra/.test(n) ? 'zerg' : state.faction !== 'all' ? state.faction : 'terran';
-      state.pads.push(normalizePad({ id: uid(), name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 40), faction, kind: 'file', fileId: id, fileName: f.name }));
+      state.pads.push(normalizePad({ id: uid(), name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 40), faction, kind: 'file', clips: [{ fileId: id, name: f.name }] }));
       added++;
     }
   }
   saveState(); render();
-  toast(`Loaded ${files.length} clip${files.length > 1 ? 's' : ''}: ${replaced} replaced matching keys, ${added} added as new keys.${memOnly ? ' This browser blocked storage, so they last for this visit only.' : ''}`);
+  toast(`Loaded ${files.length} clip${files.length > 1 ? 's' : ''}: ${replaced} added to matching keys, ${added} added as new keys.${memOnly ? ' This browser blocked storage, so they last for this visit only.' : ''}`);
   uploadMissing();
 });
 
@@ -1079,11 +1169,14 @@ function cloudDelete(path){
   api('/api/clips?path=' + encodeURIComponent(path), { method: 'DELETE' }).catch(() => {});
 }
 // Drop a key's clip from this browser and from cloud storage, unless another key still uses it.
-function releaseClip(pad){
-  const others = state.pads.filter(x => x.id !== pad.id);
-  if (pad.fileId && !others.some(x => x.fileId === pad.fileId)) delClip(pad.fileId);
-  if (pad.cloudPath && !others.some(x => x.cloudPath === pad.cloudPath)) cloudDelete(pad.cloudPath);
+function releaseClips(clips, padId){
+  const others = state.pads.filter(x => x.id !== padId).flatMap(x => x.clips);
+  for (const c of clips) {
+    if (c.fileId && !others.some(o => o.fileId === c.fileId)) delClip(c.fileId);
+    if (c.path && !others.some(o => o.path === c.path)) cloudDelete(c.path);
+  }
 }
+const releaseClip = pad => releaseClips(pad.clips, pad.id);
 
 const AUDIO_TYPES = { mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', oga:'audio/ogg', opus:'audio/ogg', m4a:'audio/mp4', aac:'audio/aac', flac:'audio/flac', webm:'audio/webm' };
 const audioType = (blob, name) => /^audio\//.test(blob.type) ? blob.type : AUDIO_TYPES[(String(name).match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase()] || 'audio/mpeg';
@@ -1100,10 +1193,10 @@ function queueUpload(fileId, blob, name){
   uploadsPending++; updateCloudUI();
   uploadChain = uploadChain.then(async () => {
     try {
-      if (!state.pads.some(p => p.fileId === fileId && !p.cloudPath)) return; // replaced or already synced meanwhile
+      if (!state.pads.some(p => p.clips.some(c => c.fileId === fileId && !c.path))) return; // removed or already synced meanwhile
       const r = await api('/api/clips', { method: 'POST', headers: { 'content-type': audioType(blob, name), 'x-file-name': encodeURIComponent(name) }, body: blob });
       let used = false;
-      state.pads.forEach(p => { if (p.fileId === fileId) { p.cloudPath = r.path; used = true; } });
+      state.pads.forEach(p => p.clips.forEach(c => { if (c.fileId === fileId) { c.path = r.path; used = true; } }));
       if (used) saveState(); else cloudDelete(r.path);
     } catch (e) {
       setCloudMsg(`Upload of “${name}” failed: ${e.message} It is still saved in this browser; use Sync now to retry.`, true);
@@ -1114,19 +1207,19 @@ function queueUpload(fileId, blob, name){
 async function uploadMissing(){
   if (!cloud.on) return;
   const seen = new Set();
-  for (const p of state.pads) {
-    if (p.kind !== 'file' || !p.fileId || p.cloudPath || seen.has(p.fileId)) continue;
-    seen.add(p.fileId);
-    const blob = await getClip(p.fileId);
-    if (blob) queueUpload(p.fileId, blob, p.fileName || p.name);
+  for (const c of state.pads.flatMap(p => p.clips)) {
+    if (c.path || seen.has(c.fileId)) continue;
+    seen.add(c.fileId);
+    const blob = await getClip(c.fileId);
+    if (blob) queueUpload(c.fileId, blob, c.name);
   }
 }
 async function prefetchClips(){
-  for (const p of state.pads) {
+  for (const c of state.pads.flatMap(p => p.clips)) {
     if (!cloud.on) return;
-    if (!p.cloudPath || !p.fileId || await getClip(p.fileId)) continue;
-    const blob = await cloudFetch(p.cloudPath);
-    if (blob) await putClip(p.fileId, blob);
+    if (!c.path || await getClip(c.fileId)) continue;
+    const blob = await cloudFetch(c.path);
+    if (blob) await putClip(c.fileId, blob);
   }
 }
 

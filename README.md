@@ -32,10 +32,10 @@ If you created the Blob store with **Public** access instead, also set `DECK_BLO
 
 ### How sync works
 
-- Each key is a row in the `deck_keys` table: label, faction, sound (synth preset, spoken line or clip), hotkey, colour, volume, pitch, favourite and which clip it uses, in board order. The master volume and last-saved time are in `deck_settings`.
+- Each key is a row in the `deck_keys` table: label, faction, sound (synth preset, spoken line or clips), hotkey, colour, volume, pitch, favourite, its clips in play order (`clips`, a JSON list) and whether they play in order or at random (`play_mode`), in board order. The master volume and last-saved time are in `deck_settings`. Rows saved before multi-clip keys (single `file_id` / `clip_path`) are read as a one-clip list.
 - Every change sends the board; the server updates changed keys, adds new ones and deletes removed ones in one transaction. Keys that didn't change are left alone. The last save wins.
 - A board saved before the database existed (`layout.json` in Blob storage) is imported automatically the first time the database is read while empty.
-- Each uploaded clip is stored once under `clips/`. Replacing a key's clip, switching the key back to a built-in sound, or removing the key deletes its clip from the store when no other key uses it.
+- Each uploaded clip is stored once under `clips/`. Removing or replacing a clip in the editor, switching the key to a built-in sound, or removing the key deletes the clip from the store when no other key uses it.
 - Clips are also cached in the browser (IndexedDB), so playback is instant and works offline. A new device downloads them in the background after connecting.
 - The cloud limit is **4 MB per clip**, set by Vercel's 4.5 MB request size for functions. Larger files still work but stay in the browser that added them.
 - When a browser connects with unsaved changes, those changes are saved to the cloud. Otherwise the cloud board replaces the browser's board. A tab that comes back into view picks up changes made on another device.
@@ -83,8 +83,9 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 - Boards saved before the unit set are migrated automatically on load: the old effect keys are replaced, and keys you added or gave an uploaded clip are kept.
 - **Quick filters** by faction (Terran, Protoss, Zerg), plus search, ★ Favorites and My clips.
 - **Hotkeys:** each key shows its letter. `Space` stops all sounds, `/` focuses search, `Esc` clears filters.
-- **Custom sounds per key:** click **⇪ Upload** under a key, or drop an audio file onto it. To go back to the built-in sound, open the key with **✎** and pick Synth preset or Voice line.
-- **Load clips** assigns many files at once. A file whose name matches a key's label or spoken line (for example `nuclear-launch-detected.mp3`) replaces that key's sound. Any other file becomes a new key.
+- **Several clips per key:** open a key with **✎**, choose **Audio clips** and use **+ Add clips** (several files at once, up to 20 per key). Each clip in the list can be played (▶), moved up or down (↑ ↓), replaced, or removed (✕). With two or more clips, pick **Play in order** (cycles through the list) or **Random** (never the same clip twice in a row). Dropping audio files onto a key adds them to the end of its list.
+- To go back to the built-in sound, open the key with **✎** and pick Synth preset or Voice line.
+- **Load clips** adds many files at once. A file whose name matches a key's label or spoken line (for example `nuclear-launch-detected.mp3`) is added to that key's clips, so `marine-1.mp3` and `marine-2.mp3` both land on Marine. Any other file becomes a new key.
 - **Every key is editable:** **✎** under any key, the built-in ones included, changes its label, faction, sound (voice line text, synth preset or your own clip), light colour, hotkey, volume and pitch.
 - **Add and remove keys at will:** **+ Add key** in the header, or the Add key tile at the end of the board, creates a new one. **Remove key** in a key's editor deletes it, with **Undo** for a few seconds afterwards. **Layout → Reset to defaults** brings back the original set.
 - **Layout** copies the board setup as JSON, pastes one back in, or resets to defaults.
