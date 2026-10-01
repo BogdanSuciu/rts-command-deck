@@ -367,9 +367,6 @@ const DEFAULT_PADS = [
   ['Supply depots','terran','voice','Additional supply depots required.','x'],
   ['More pylons','protoss','voice','You must construct additional pylons.','c'],
   ['More overlords','zerg','voice','Spawn more overlords.','v'],
-  ['Not enough minerals','terran','voice','Not enough minerals.','b'],
-  ['Need vespene gas','terran','voice','Insufficient vespene gas.','n'],
-  ['Base under attack','terran','voice','Your base is under attack.','m'],
 ].map(([name,faction,kind,src,key],i) => ({
   id:'u'+i, name, faction, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
   key, vol:1, pitch:1, color:'', fav:false,
@@ -377,7 +374,12 @@ const DEFAULT_PADS = [
 
 // Boards saved before the unit-lines set have default keys with ids d0…d30. Swap those for the
 // unit keys, but keep any key the person added or gave an uploaded clip (with a fresh id).
+// Default keys that were later removed from the set (the former Neutral alerts). Saved boards drop
+// them too, unless the person gave one an uploaded clip.
+const RETIRED_IDS = new Set(['u24', 'u25', 'u26']);
 function migratePads(pads){
+  const retired = pads.filter(p => RETIRED_IDS.has(p.id) && p.kind !== 'file');
+  if (retired.length) pads = pads.filter(p => !retired.includes(p));
   const isOld = p => /^d\d+$/.test(p.id);
   if (!pads.some(isOld)) return pads;
   const kept = pads.filter(p => !isOld(p) || p.kind === 'file').map(p => isOld(p) ? { ...p, id: uid() } : p);
@@ -1221,7 +1223,7 @@ syncMaster();
 render();
 if (migrated) {
   saveState(); // also marks the cloud board for saving, so the old set isn't pulled back in
-  toast('The board now has one key per unit with its line. Keys with your uploaded clips were kept at the end.');
+  toast('Updated your board to the current key set. Keys with your uploaded clips were kept.');
 }
 updateCloudUI();
 if (cloud.pass) connect(true);

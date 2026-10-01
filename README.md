@@ -73,7 +73,7 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 
 ## Features
 
-- **27 keys across Terran, Protoss and Zerg:** 11 Terran and 5 Protoss units each speak their line ("You want a piece of me, boy?", "My life for Aiur!"), 4 Zerg units use creature sounds since Zerg units don't talk, and 7 advisor alerts sit with their race ("Nuclear launch detected.", "You must construct additional pylons.", "Spawn more overlords.").
+- **24 keys across Terran, Protoss and Zerg:** 11 Terran and 5 Protoss units each speak their line ("You want a piece of me, boy?", "My life for Aiur!"), 4 Zerg units use creature sounds since Zerg units don't talk, and 4 advisor alerts sit with their race ("Nuclear launch detected.", "You must construct additional pylons.", "Spawn more overlords.").
 - **Stand-in audio:** unit lines are spoken by the browser's text-to-speech and Zerg sounds are synthesized with the Web Audio API. Upload the original clip on any key to replace them.
 - Boards saved before the unit set are migrated automatically on load: the old effect keys are replaced, and keys you added or gave an uploaded clip are kept.
 - **Quick filters** by faction (Terran, Protoss, Zerg), plus search, ★ Favorites and My clips.
