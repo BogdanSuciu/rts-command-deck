@@ -471,6 +471,7 @@ em.off{font-style:normal; font-size:11px; color:var(--ink-faint)}
         <div class="s-list" id="ms-objs"></div>
         <div><button type="button" class="key" id="ms-add-obj">+ Add objective</button></div>
       </div>
+      <div class="field full"><span class="lbl">Victory points</span><span class="note">The VP counters are hidden outside these phases. Scoring at the end of a round still counts.</span><div id="ms-vp"></div></div>
       <div class="field full"><span class="lbl">Initiative</span><div id="ms-init"></div></div>
       <div class="field full"><span class="lbl">Sound cues (keys from your board)</span></div>
       <label class="field" for="ms-cue-round"><span class="lbl">New round</span><select id="ms-cue-round" data-cue="round"></select></label>
@@ -1495,11 +1496,12 @@ const DEFAULT_MISSION = {
     { name: 'Vespene gas', phases: [], roundStart: 'keep', value: 0 },
   ],
   objectives: [
-    { id: 'o1', name: 'Objective A', vp: 1, phases: [], clearEachRound: false },
-    { id: 'o2', name: 'Objective B', vp: 1, phases: [], clearEachRound: false },
-    { id: 'o3', name: 'Center', vp: 2, phases: [], clearEachRound: false },
+    { id: 'o1', name: 'Objective A', vp: 1, phases: ['ph4'], clearEachRound: false },
+    { id: 'o2', name: 'Objective B', vp: 1, phases: ['ph4'], clearEachRound: false },
+    { id: 'o3', name: 'Center', vp: 2, phases: ['ph4'], clearEachRound: false },
   ],
   initiative: { phases: ['ph1'], roundStart: 'keep' },
+  vp: { phases: ['ph4'] },
   cues: { round: '', phase: '', capture: '', end: '' },
 };
 const tracker = { config: null, game: null, templates: [] };
@@ -1537,6 +1539,7 @@ function normConfig(c){
     vpToWin: clampInt(c.vpToWin, 0, 999, 0),
     phases, resources, objectives, cues,
     initiative: { phases: refs(ini.phases), roundStart: INIT_START[ini.roundStart] ? ini.roundStart : 'keep' },
+    vp: { phases: refs(c.vp && c.vp.phases) },
   };
 }
 function freshGame(cfg, prev){
@@ -1567,9 +1570,17 @@ function normGame(g, cfg){
     })),
   };
 }
+// The starter mission before VP visibility existed showed points and objectives in every phase. If a saved
+// mission is still exactly that starter (never edited), switch it to the current starter.
+function isOldStarter(c){
+  if (!c || typeof c !== 'object' || 'vp' in c || c.mission !== 'Custom mission') return false;
+  const names = (c.phases || []).map(p => typeof p === 'string' ? p : p && p.name).join('|');
+  const objs = (c.objectives || []).map(o => `${o.id}:${o.name}:${o.vp}:${(o.phases || []).length}`).join('|');
+  return names === 'Command|Movement|Combat|Scoring' && objs === 'o1:Objective A:1:0|o2:Objective B:1:0|o3:Center:2:0';
+}
 function applyTrackerData(t){
   if (!t || typeof t !== 'object') return false;
-  tracker.config = normConfig(t.config || DEFAULT_MISSION);
+  tracker.config = normConfig(isOldStarter(t.config) ? { ...DEFAULT_MISSION, cues: t.config.cues } : t.config || DEFAULT_MISSION);
   tracker.game = normGame(t.game, tracker.config);
   tracker.templates = (Array.isArray(t.templates) ? t.templates : []).slice(0, 30).map(normConfig);
   return true;
@@ -1664,7 +1675,7 @@ function renderMission(){
   if (g.over) banner.textContent = `Mission complete · ${resultText()}`;
 
   // How many items this phase hides
-  const hiddenCount = g.over ? 0 : c.resources.filter(r => !inPhase(r)).length + c.objectives.filter(o => !inPhase(o)).length + (inPhase(c.initiative) ? 0 : 1);
+  const hiddenCount = g.over ? 0 : (inPhase(c.vp) ? 0 : 1) + c.resources.filter(r => !inPhase(r)).length + c.objectives.filter(o => !inPhase(o)).length + (inPhase(c.initiative) ? 0 : 1);
   $('#m-hidden-note').textContent = hiddenCount ? (g.showAll ? `Showing ${hiddenCount} item${hiddenCount > 1 ? 's' : ''} not used in this phase` : `${hiddenCount} item${hiddenCount > 1 ? 's' : ''} hidden in this phase`) : '';
   $('#m-showall').hidden = !hiddenCount;
 
@@ -1680,12 +1691,12 @@ function renderMission(){
         ${iniShown ? `<button class="key init" type="button" data-init="${i}" aria-pressed="${g.initiative === i}"><span class="lamp"></span>Initiative</button>`
           : g.initiative === i ? '<span class="init-tag">Has initiative</span>' : ''}
       </div>
-      <div class="p-vp">
-        <span class="lbl">VP</span>
+      ${shown(c.vp) ? `<div class="p-vp">
+        <span class="lbl">VP${inPhase(c.vp) ? '' : ' <em class="off">other phase</em>'}</span>
         <button class="mini" type="button" data-vp="${i}" data-d="-1" aria-label="${esc(p.name)} minus 1 VP">−1</button>
         <span class="digits" aria-live="polite" aria-label="${esc(p.name)} victory points">${p.vp}</span>
         <button class="mini" type="button" data-vp="${i}" data-d="1" aria-label="${esc(p.name)} plus 1 VP">+1</button>
-      </div>
+      </div>` : ''}
       ${res.length ? `<div class="res">${res.map(r => `
         <span class="r-name">${esc(r.name)}${inPhase(r) ? '' : ' <em class="off">other phase</em>'}</span>
         <span class="r-ctl">
@@ -1861,6 +1872,7 @@ function renderSetup(){
       </div>
       ${phaseChips(msCfg.initiative.phases, 'initiative', '')}
     </div>`;
+  $('#ms-vp').innerHTML = `<div class="s-card">${phaseChips(msCfg.vp.phases, 'vp', '')}</div>`;
 }
 function fillSetup(cfg){
   msCfg = msClone(cfg);
@@ -1881,7 +1893,7 @@ function readSetup(){
     cues: Object.fromEntries([...document.querySelectorAll('#ms-form select[data-cue]')].map(s => [s.dataset.cue, s.value])),
   });
 }
-const msTarget = (k, i) => k === 'initiative' ? msCfg.initiative : msCfg[k][+i];
+const msTarget = (k, i) => k === 'initiative' || k === 'vp' ? msCfg[k] : msCfg[k][+i];
 $('#ms-form').addEventListener('input', e => {
   const t = e.target, d = t.dataset; if (!d.k || !d.f) return;
   const item = msTarget(d.k, d.i);
@@ -1908,7 +1920,7 @@ $('#ms-form').addEventListener('click', e => {
   } else if (d.del) {
     const L = msCfg[d.del], [gone] = L.splice(+d.i, 1);
     if (d.del === 'phases') { // drop references to a removed phase
-      for (const it of [...msCfg.resources, ...msCfg.objectives, msCfg.initiative]) it.phases = it.phases.filter(x => x !== gone.id);
+      for (const it of [...msCfg.resources, ...msCfg.objectives, msCfg.initiative, msCfg.vp]) it.phases = it.phases.filter(x => x !== gone.id);
     }
     renderSetup();
   }
