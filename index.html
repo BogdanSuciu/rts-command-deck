@@ -143,6 +143,7 @@ input[type=range]::-moz-range-thumb{width:14px; height:22px; border-radius:3px; 
 .pad .hk{position:absolute; top:7px; right:9px; font:13px/1 var(--f-mono); color:var(--ink-dim); background:rgba(0,0,0,.28);
   border-radius:4px; padding:4px 6px; min-width:22px; text-align:center; text-transform:uppercase}
 .pad .nm{font:600 15px/1.15 var(--f-display); letter-spacing:.02em; text-transform:uppercase; text-wrap:balance; overflow-wrap:break-word; hyphens:auto}
+.pad .nm.long{font-size:13px; letter-spacing:0}
 .pad .mt{font-size:11.5px; color:var(--ink-dim); letter-spacing:.04em}
 .pad .mt b{font-weight:600; color:var(--led)}
 .well .up,.well .revert{
@@ -215,6 +216,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
   .grid{grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
   .pad{min-height:100px}
   .pad .nm{font-size:14px}
+  .pad .nm.long{font-size:12px}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
@@ -226,7 +228,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
     <div class="hazard" style="grid-column:1 / -1"></div>
     <div class="brand">
       <h1>RTS Command Deck</h1>
-      <p>Sci-fi strategy soundboard · Terran · Protoss · Zerg</p>
+      <p>Unit lines soundboard · Terran · Protoss · Zerg</p>
     </div>
     <div class="lcd" aria-live="polite">
       <div class="now" id="lcd-now">&gt; Awaiting orders_</div>
@@ -248,7 +250,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
   <section class="plate filters" aria-label="Filters">
     <div class="frow">
       <span class="lbl">Search</span>
-      <div class="search"><input id="q" type="search" placeholder="gauss, storm, overlords…" autocomplete="off" aria-label="Search sounds"></div>
+      <div class="search"><input id="q" type="search" placeholder="marine, zealot, pylons…" autocomplete="off" aria-label="Search sounds"></div>
       <div class="chips" id="toggles"></div>
     </div>
     <div class="frow"><span class="lbl">Faction</span><div class="chips" id="f-faction"></div></div>
@@ -258,7 +260,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
 
   <main class="grid" id="grid" aria-label="Sound keys"></main>
 
-  <footer>Fan-made board. Every built-in sound is synthesized live in your browser and voice lines use your device's speech engine; nothing is taken from the games. Use Load clips to drop in your own recordings all at once: a file named like a key (for example nuclear_launch_detected.wav) replaces that key's sound, and any other file becomes a new key. Your layout and uploaded clips are saved in this browser only.</footer>
+  <footer>Fan-made board. Until you upload the original clips, unit lines are read by your device's speech engine and Zerg sounds are synthesized; nothing is taken from the games. Upload a clip under any key, drop a file on it, or use Load clips to add many at once: a file named after a unit or its line (for example marine.mp3 or nuclear_launch_detected.wav) lands on that key. Clips are saved in this browser, and in your private cloud storage when Cloud is connected.</footer>
 </div>
 
 <dialog id="editor" aria-labelledby="ed-title">
@@ -341,48 +343,56 @@ const FACTIONS = {
   zerg:    { label:'Zerg',    hex:'#c77dff' },
   neutral: { label:'Neutral', hex:'#8cf29e' },
 };
-const CATS = {
-  weapons:'Weapons', abilities:'Abilities', units:'Units & structures', alerts:'Alerts', voice:'Voice lines',
-};
+const CATS = { units:'Units', advisor:'Advisor' };
 
+// One key per unit, labelled with the unit and speaking its line. Zerg units don't talk in the game,
+// so theirs use creature sounds. Upload the original clip on any key to replace the stand-in.
 const DEFAULT_PADS = [
-  ['Gauss Rifle','terran','weapons','synth','gauss','1'],
-  ['Flamethrower','terran','weapons','synth','flame','2'],
-  ['Siege Cannon','terran','weapons','synth','siege','3'],
-  ['Yamato Cannon','terran','abilities','synth','yamato','4'],
-  ['Stim Pack','terran','abilities','synth','stim','5'],
-  ['Scanner Sweep','terran','abilities','synth','scan','6'],
-  ['Nuke Klaxon','terran','alerts','synth','nuke','7'],
-  ['ATA Laser Battery','terran','weapons','synth','laser','8'],
-  ['Warp In','protoss','units','synth','warp','q'],
-  ['Psionic Storm','protoss','abilities','synth','storm','w'],
-  ['Shield Impact','protoss','weapons','synth','shield','e'],
-  ['Photon Cannon','protoss','weapons','synth','photon','r'],
-  ['Psi Blades','protoss','weapons','synth','blades','t'],
-  ['Recall','protoss','abilities','synth','recall','y'],
-  ['Larva Spawn','zerg','units','synth','spawn','a'],
-  ['Burrow','zerg','abilities','synth','burrow','s'],
-  ['Ultralisk Roar','zerg','units','synth','roar','d'],
-  ['Acid Spit','zerg','weapons','synth','spit','f'],
-  ['Mutalisk Swarm','zerg','units','synth','swarm','g'],
-  ['Mineral Mining','neutral','units','synth','mineral','z'],
-  ['Under Attack','neutral','alerts','synth','attack','x'],
-  ['Error Buzz','neutral','alerts','synth','error','c'],
-  ['Unit Select','neutral','units','synth','click','v'],
-  ['Research Complete','neutral','alerts','synth','complete','b'],
-  ['Victory Fanfare','neutral','alerts','synth','victory','n'],
-  ['Nuclear launch detected','terran','voice','voice','Nuclear launch detected.','u'],
-  ['Cruiser operational','terran','voice','voice','Battlecruiser operational.','o'],
-  ['More pylons','protoss','voice','voice','You must construct additional pylons.','i'],
-  ['Spawn more overlords','zerg','voice','voice','Spawn more overlords.','h'],
-  ['Not enough minerals','neutral','voice','voice','Not enough minerals.','m'],
-  ['Base under attack','neutral','voice','voice','Your base is under attack.','j'],
+  ['SCV','terran','units','voice','SCV good to go, sir.','1'],
+  ['Marine','terran','units','voice','You want a piece of me, boy?','2'],
+  ['Firebat','terran','units','voice','Need a light?','3'],
+  ['Medic','terran','units','voice','Where does it hurt?','4'],
+  ['Ghost','terran','units','voice','Somebody call for an exterminator?','5'],
+  ['Siege Tank','terran','units','voice','Ready to roll out!','6'],
+  ['Goliath','terran','units','voice','Goliath online.','7'],
+  ['Wraith','terran','units','voice','Wraith awaiting launch orders.','8'],
+  ['Dropship','terran','units','voice','Can I take your order?','9'],
+  ['Valkyrie','terran','units','voice','Valkyrie prepared.','0'],
+  ['Battlecruiser','terran','units','voice','Battlecruiser operational.','q'],
+  ['Zealot','protoss','units','voice','My life for Aiur!','w'],
+  ['Dragoon','protoss','units','voice','I have returned.','e'],
+  ['Dark Templar','protoss','units','voice','Adun Toridas.','r'],
+  ['Archon','protoss','units','voice','Power overwhelming.','t'],
+  ['Carrier','protoss','units','voice','Carrier has arrived.','y'],
+  ['Drone','zerg','units','synth','spawn','a'],
+  ['Hydralisk','zerg','units','synth','spit','s'],
+  ['Mutalisk','zerg','units','synth','swarm','d'],
+  ['Ultralisk','zerg','units','synth','roar','f'],
+  ['Nuclear launch','terran','advisor','voice','Nuclear launch detected.','z'],
+  ['Supply depots','terran','advisor','voice','Additional supply depots required.','x'],
+  ['More pylons','protoss','advisor','voice','You must construct additional pylons.','c'],
+  ['More overlords','zerg','advisor','voice','Spawn more overlords.','v'],
+  ['Not enough minerals','neutral','advisor','voice','Not enough minerals.','b'],
+  ['Need vespene gas','neutral','advisor','voice','Insufficient vespene gas.','n'],
+  ['Base under attack','neutral','advisor','voice','Your base is under attack.','m'],
 ].map(([name,faction,cat,kind,src,key],i) => ({
-  id:'d'+i, name, faction, cat, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
+  id:'u'+i, name, faction, cat, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
   key, vol:1, pitch:1, color:'', fav:false,
 }));
 
+// Boards saved before the unit-lines set have default keys with ids d0…d30. Swap those for the
+// unit keys, but keep any key the person added or gave an uploaded clip (with a fresh id).
+function migratePads(pads){
+  const isOld = p => /^d\d+$/.test(p.id);
+  if (!pads.some(isOld)) return pads;
+  const kept = pads.filter(p => !isOld(p) || p.kind === 'file').map(p => isOld(p) ? { ...p, id: uid() } : p);
+  const taken = new Set(kept.map(p => p.key).filter(Boolean));
+  const fresh = structuredClone(DEFAULT_PADS).map(p => taken.has(p.key) ? { ...p, key: '' } : p);
+  return [...fresh, ...kept];
+}
+
 const STORE_KEY = 'rtsdeck.v1';
+let migrated = false;
 const state = {
   pads: [], master: 0.8, faction:'all', cat:'all', favOnly:false, clipsOnly:false, q:'', editing:false,
 };
@@ -392,7 +402,11 @@ function loadState(){
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (Array.isArray(s.pads)) state.pads = s.pads.map(normalizePad).filter(Boolean);
+      if (Array.isArray(s.pads)) {
+        const pads = s.pads.map(normalizePad).filter(Boolean);
+        state.pads = migratePads(pads);
+        if (state.pads !== pads) migrated = true;
+      }
       if (typeof s.master === 'number') state.master = s.master;
     }
   } catch (e) { /* storage unavailable */ }
@@ -427,7 +441,7 @@ function normalizePad(p){
   return {
     id: String(p.id || uid()), name: String(p.name).slice(0,40),
     faction: FACTIONS[p.faction] ? p.faction : 'neutral',
-    cat: CATS[p.cat] ? p.cat : 'alerts',
+    cat: CATS[p.cat] ? p.cat : p.cat === 'alerts' ? 'advisor' : 'units',
     kind: ['synth','voice','file'].includes(p.kind) ? p.kind : 'synth',
     preset: PRESETS[p.preset] ? p.preset : 'click',
     text: String(p.text || ''), fileId: p.fileId || '', fileName: p.fileName || '',
@@ -725,7 +739,7 @@ function renderGrid(){
     <div class="well" data-id="${esc(p.id)}">
       <button class="pad" style="--led:${padColor(p)}" data-play="${esc(p.id)}" aria-label="${esc(p.name)}${p.key ? ', hotkey ' + esc(keyLabel(p.key)) : ''}">
         <span class="led"></span>${p.key ? `<span class="hk">${esc(keyLabel(p.key))}</span>` : ''}
-        <span class="nm">${esc(p.name)}</span>
+        <span class="nm${/\S{12,}/.test(p.name) ? ' long' : ''}">${esc(p.name)}</span>
         <span class="mt"><b>${FACTIONS[p.faction].label}</b> · ${esc(CATS[p.cat])}${p.kind === 'file' ? ' · clip' : ''}</span>
       </button>
       <button class="up${p.kind === 'file' ? ' has' : ''}" data-up="${esc(p.id)}" title="${p.kind === 'file' ? 'Playing ' + esc(p.fileName) + '. Click to replace, or drop a file on the key.' : 'Upload a sound file for this key, or drop one on it'}" aria-label="Upload sound file for ${esc(p.name)}">${p.kind === 'file' ? '♪ Clip' : '⇪ Upload'}</button>
@@ -1120,10 +1134,11 @@ async function pushLayout(){
 function applyRemote(r){
   const pads = (r.layout.pads || []).map(normalizePad).filter(Boolean);
   if (!pads.length) return false;
-  state.pads = pads;
+  state.pads = migratePads(pads);
   if (typeof r.layout.master === 'number') state.master = r.layout.master;
   cloud.savedAt = r.savedAt; cloud.dirty = false;
   localSave(); persistCloud(); syncMaster(); render();
+  if (state.pads !== pads) saveState(); // a board from before the unit-lines set: save the migrated version back
   return true;
 }
 // Connect (or re-sync): unsaved local changes win; otherwise the newer cloud board replaces this browser's.
@@ -1215,6 +1230,10 @@ loadCloud();
 fillSelects();
 syncMaster();
 render();
+if (migrated) {
+  saveState(); // also marks the cloud board for saving, so the old set isn't pulled back in
+  toast('The board now has one key per unit with its line. Keys with your uploaded clips were kept at the end.');
+}
 updateCloudUI();
 if (cloud.pass) connect(true);
 })();

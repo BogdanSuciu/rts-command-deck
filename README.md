@@ -73,9 +73,10 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 
 ## Features
 
-- **31 keys** across Terran, Protoss, Zerg and Neutral: weapons, abilities, units and structures, alerts and voice lines.
-- **Built-in sounds** are synthesized live with the Web Audio API. Voice lines use the browser's text-to-speech.
-- **Quick filters** by faction and type, plus search, ★ Favorites and My clips.
+- **27 keys, one per unit:** 11 Terran and 5 Protoss units each speak their line ("You want a piece of me, boy?", "My life for Aiur!"), 4 Zerg units use creature sounds since Zerg units don't talk, and 7 Advisor keys cover the base alerts ("Nuclear launch detected.", "You must construct additional pylons.").
+- **Stand-in audio:** unit lines are spoken by the browser's text-to-speech and Zerg sounds are synthesized with the Web Audio API. Upload the original clip on any key to replace them.
+- Boards saved before the unit set are migrated automatically on load: the old effect keys are replaced, and keys you added or gave an uploaded clip are kept.
+- **Quick filters** by faction and by type (Units or Advisor), plus search, ★ Favorites and My clips.
 - **Hotkeys:** each key shows its letter. `Space` stops all sounds, `/` focuses search, `Esc` clears filters.
 - **Custom sounds per key:** click **⇪ Upload** under a key, or drop an audio file onto it. **↺** goes back to the built-in sound.
 - **Load clips** assigns many files at once. A file whose name matches a key's label or spoken line (for example `nuclear-launch-detected.mp3`) replaces that key's sound. Any other file becomes a new key.
