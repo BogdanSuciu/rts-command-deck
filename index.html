@@ -30,7 +30,7 @@
   --ink:#dbe4ec; --ink-dim:#8797a6; --ink-faint:#56636f;
   --lcd-bg:#0b1710; --lcd:#78ffaa; --lcd-dim:#2f6a47;
   --hazard:#e8b22c; --danger:#ff5a4e;
-  --terran:#ff9a3c; --protoss:#48c6ff; --zerg:#c77dff; --neutral:#8cf29e;
+  --terran:#ff9a3c; --protoss:#48c6ff; --zerg:#c77dff;
   --f-display:"Chakra Petch","Arial Narrow",sans-serif;
   --f-body:"Barlow","Helvetica Neue",Arial,sans-serif;
   --f-mono:"Share Tech Mono",ui-monospace,Menlo,monospace;
@@ -124,7 +124,7 @@ input[type=range]::-moz-range-thumb{width:14px; height:22px; border-radius:3px; 
   box-shadow:inset 0 3px 8px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.05);
 }
 .pad{
-  --led:var(--neutral);
+  --led:var(--terran);
   position:relative; width:100%; min-height:112px; border-radius:10px; cursor:pointer; text-align:left; color:var(--ink);
   border:1px solid var(--cap-edge); padding:36px 12px 10px; display:flex; flex-direction:column; justify-content:flex-end; gap:4px;
   background:
@@ -254,7 +254,6 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       <div class="chips" id="toggles"></div>
     </div>
     <div class="frow"><span class="lbl">Faction</span><div class="chips" id="f-faction"></div></div>
-    <div class="frow"><span class="lbl">Type</span><div class="chips" id="f-cat"></div></div>
     <div class="hint">Hotkeys work anytime: press the letter shown on a key. <kbd>Space</kbd> stops everything, <kbd>/</kbd> jumps to search, <kbd>Esc</kbd> clears filters.</div>
   </section>
 
@@ -268,8 +267,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
     <h2 id="ed-title">Edit key</h2>
     <div class="form">
       <label class="field full" for="ed-name"><span class="lbl">Label</span><input type="text" id="ed-name" maxlength="40" required></label>
-      <label class="field" for="ed-faction"><span class="lbl">Faction</span><select id="ed-faction"></select></label>
-      <label class="field" for="ed-cat"><span class="lbl">Type</span><select id="ed-cat"></select></label>
+      <label class="field full" for="ed-faction"><span class="lbl">Faction</span><select id="ed-faction"></select></label>
       <div class="field full"><span class="lbl">Sound source</span>
         <div class="seg" id="ed-kind" role="radiogroup" aria-label="Sound source">
           <button type="button" class="key" data-kind="synth" style="--lamp:var(--lcd)"><span class="lamp"></span>Synth preset</button>
@@ -341,42 +339,39 @@ const FACTIONS = {
   terran:  { label:'Terran',  hex:'#ff9a3c' },
   protoss: { label:'Protoss', hex:'#48c6ff' },
   zerg:    { label:'Zerg',    hex:'#c77dff' },
-  neutral: { label:'Neutral', hex:'#8cf29e' },
 };
-const CATS = { units:'Units', advisor:'Advisor' };
-
 // One key per unit, labelled with the unit and speaking its line. Zerg units don't talk in the game,
 // so theirs use creature sounds. Upload the original clip on any key to replace the stand-in.
 const DEFAULT_PADS = [
-  ['SCV','terran','units','voice','SCV good to go, sir.','1'],
-  ['Marine','terran','units','voice','You want a piece of me, boy?','2'],
-  ['Firebat','terran','units','voice','Need a light?','3'],
-  ['Medic','terran','units','voice','Where does it hurt?','4'],
-  ['Ghost','terran','units','voice','Somebody call for an exterminator?','5'],
-  ['Siege Tank','terran','units','voice','Ready to roll out!','6'],
-  ['Goliath','terran','units','voice','Goliath online.','7'],
-  ['Wraith','terran','units','voice','Wraith awaiting launch orders.','8'],
-  ['Dropship','terran','units','voice','Can I take your order?','9'],
-  ['Valkyrie','terran','units','voice','Valkyrie prepared.','0'],
-  ['Battlecruiser','terran','units','voice','Battlecruiser operational.','q'],
-  ['Zealot','protoss','units','voice','My life for Aiur!','w'],
-  ['Dragoon','protoss','units','voice','I have returned.','e'],
-  ['Dark Templar','protoss','units','voice','Adun Toridas.','r'],
-  ['Archon','protoss','units','voice','Power overwhelming.','t'],
-  ['Carrier','protoss','units','voice','Carrier has arrived.','y'],
-  ['Drone','zerg','units','synth','spawn','a'],
-  ['Hydralisk','zerg','units','synth','spit','s'],
-  ['Mutalisk','zerg','units','synth','swarm','d'],
-  ['Ultralisk','zerg','units','synth','roar','f'],
-  ['Nuclear launch','terran','advisor','voice','Nuclear launch detected.','z'],
-  ['Supply depots','terran','advisor','voice','Additional supply depots required.','x'],
-  ['More pylons','protoss','advisor','voice','You must construct additional pylons.','c'],
-  ['More overlords','zerg','advisor','voice','Spawn more overlords.','v'],
-  ['Not enough minerals','neutral','advisor','voice','Not enough minerals.','b'],
-  ['Need vespene gas','neutral','advisor','voice','Insufficient vespene gas.','n'],
-  ['Base under attack','neutral','advisor','voice','Your base is under attack.','m'],
-].map(([name,faction,cat,kind,src,key],i) => ({
-  id:'u'+i, name, faction, cat, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
+  ['SCV','terran','voice','SCV good to go, sir.','1'],
+  ['Marine','terran','voice','You want a piece of me, boy?','2'],
+  ['Firebat','terran','voice','Need a light?','3'],
+  ['Medic','terran','voice','Where does it hurt?','4'],
+  ['Ghost','terran','voice','Somebody call for an exterminator?','5'],
+  ['Siege Tank','terran','voice','Ready to roll out!','6'],
+  ['Goliath','terran','voice','Goliath online.','7'],
+  ['Wraith','terran','voice','Wraith awaiting launch orders.','8'],
+  ['Dropship','terran','voice','Can I take your order?','9'],
+  ['Valkyrie','terran','voice','Valkyrie prepared.','0'],
+  ['Battlecruiser','terran','voice','Battlecruiser operational.','q'],
+  ['Zealot','protoss','voice','My life for Aiur!','w'],
+  ['Dragoon','protoss','voice','I have returned.','e'],
+  ['Dark Templar','protoss','voice','Adun Toridas.','r'],
+  ['Archon','protoss','voice','Power overwhelming.','t'],
+  ['Carrier','protoss','voice','Carrier has arrived.','y'],
+  ['Drone','zerg','synth','spawn','a'],
+  ['Hydralisk','zerg','synth','spit','s'],
+  ['Mutalisk','zerg','synth','swarm','d'],
+  ['Ultralisk','zerg','synth','roar','f'],
+  ['Nuclear launch','terran','voice','Nuclear launch detected.','z'],
+  ['Supply depots','terran','voice','Additional supply depots required.','x'],
+  ['More pylons','protoss','voice','You must construct additional pylons.','c'],
+  ['More overlords','zerg','voice','Spawn more overlords.','v'],
+  ['Not enough minerals','terran','voice','Not enough minerals.','b'],
+  ['Need vespene gas','terran','voice','Insufficient vespene gas.','n'],
+  ['Base under attack','terran','voice','Your base is under attack.','m'],
+].map(([name,faction,kind,src,key],i) => ({
+  id:'u'+i, name, faction, kind, preset: kind==='synth'?src:'spawn', text: kind==='voice'?src:'',
   key, vol:1, pitch:1, color:'', fav:false,
 }));
 
@@ -394,7 +389,7 @@ function migratePads(pads){
 const STORE_KEY = 'rtsdeck.v1';
 let migrated = false;
 const state = {
-  pads: [], master: 0.8, faction:'all', cat:'all', favOnly:false, clipsOnly:false, q:'', editing:false,
+  pads: [], master: 0.8, faction:'all', favOnly:false, clipsOnly:false, q:'', editing:false,
 };
 
 function loadState(){
@@ -440,8 +435,7 @@ function normalizePad(p){
   if (!p || typeof p !== 'object' || !p.name) return null;
   return {
     id: String(p.id || uid()), name: String(p.name).slice(0,40),
-    faction: FACTIONS[p.faction] ? p.faction : 'neutral',
-    cat: CATS[p.cat] ? p.cat : p.cat === 'alerts' ? 'advisor' : 'units',
+    faction: FACTIONS[p.faction] ? p.faction : 'terran',
     kind: ['synth','voice','file'].includes(p.kind) ? p.kind : 'synth',
     preset: PRESETS[p.preset] ? p.preset : 'click',
     text: String(p.text || ''), fileId: p.fileId || '', fileName: p.fileName || '',
@@ -710,11 +704,10 @@ function sourceLabel(p){ return p.kind === 'voice' ? 'Voice' : p.kind === 'file'
 
 function matches(p){
   if (state.faction !== 'all' && p.faction !== state.faction) return false;
-  if (state.cat !== 'all' && p.cat !== state.cat) return false;
   if (state.favOnly && !p.fav) return false;
   if (state.clipsOnly && p.kind !== 'file') return false;
   if (state.q) {
-    const hay = [p.name, p.text, p.fileName, FACTIONS[p.faction].label, CATS[p.cat], PRESETS[p.preset]?.label, p.kind === 'synth' ? '' : sourceLabel(p)].join(' ').toLowerCase();
+    const hay = [p.name, p.text, p.fileName, FACTIONS[p.faction].label, PRESETS[p.preset]?.label, p.kind === 'synth' ? '' : sourceLabel(p)].join(' ').toLowerCase();
     if (!state.q.split(/\s+/).every(w => hay.includes(w))) return false;
   }
   return true;
@@ -727,8 +720,6 @@ function renderFilters(){
   const pads = state.pads;
   $('#f-faction').innerHTML = chip('All', state.faction === 'all', 'var(--lcd)', pads.length, 'data-faction="all"') +
     Object.entries(FACTIONS).map(([k, f]) => chip(f.label, state.faction === k, f.hex, pads.filter(p => p.faction === k).length, `data-faction="${k}"`)).join('');
-  $('#f-cat').innerHTML = chip('All', state.cat === 'all', 'var(--lcd)', null, 'data-cat="all"') +
-    Object.entries(CATS).map(([k, l]) => chip(l, state.cat === k, 'var(--lcd)', pads.filter(p => p.cat === k).length, `data-cat="${k}"`)).join('');
   $('#toggles').innerHTML =
     chip('★ Favorites', state.favOnly, 'var(--hazard)', pads.filter(p => p.fav).length, 'data-toggle="favOnly"') +
     chip('My clips', state.clipsOnly, 'var(--hazard)', pads.filter(p => p.kind === 'file').length, 'data-toggle="clipsOnly"');
@@ -740,7 +731,7 @@ function renderGrid(){
       <button class="pad" style="--led:${padColor(p)}" data-play="${esc(p.id)}" aria-label="${esc(p.name)}${p.key ? ', hotkey ' + esc(keyLabel(p.key)) : ''}">
         <span class="led"></span>${p.key ? `<span class="hk">${esc(keyLabel(p.key))}</span>` : ''}
         <span class="nm${/\S{12,}/.test(p.name) ? ' long' : ''}">${esc(p.name)}</span>
-        <span class="mt"><b>${FACTIONS[p.faction].label}</b> · ${esc(CATS[p.cat])}${p.kind === 'file' ? ' · clip' : ''}</span>
+        <span class="mt"><b>${FACTIONS[p.faction].label}</b>${p.kind === 'file' ? ' · your clip' : ''}</span>
       </button>
       <button class="up${p.kind === 'file' ? ' has' : ''}" data-up="${esc(p.id)}" title="${p.kind === 'file' ? 'Playing ' + esc(p.fileName) + '. Click to replace, or drop a file on the key.' : 'Upload a sound file for this key, or drop one on it'}" aria-label="Upload sound file for ${esc(p.name)}">${p.kind === 'file' ? '♪ Clip' : '⇪ Upload'}</button>
       ${p.kind === 'file' && p.prevKind ? `<button class="revert" data-revert="${esc(p.id)}" title="Go back to the built-in sound" aria-label="Use built-in sound for ${esc(p.name)}">↺</button>` : ''}
@@ -766,7 +757,7 @@ function press(el){ if (!el) return; el.classList.add('down'); setTimeout(() => 
 
 async function trigger(pad){
   $('#lcd-now').dataset.touched = '1';
-  setLCD('▶ ' + pad.name, `${FACTIONS[pad.faction].label} / ${CATS[pad.cat]} / ${sourceLabel(pad)}`);
+  setLCD('▶ ' + pad.name, `${FACTIONS[pad.faction].label} / ${sourceLabel(pad)}`);
   light(pad.id, 0.3);
   const dur = await play(pad);
   light(pad.id, dur);
@@ -803,12 +794,11 @@ grid.addEventListener('click', e => {
 document.querySelector('.filters').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.faction) state.faction = b.dataset.faction;
-  else if (b.dataset.cat) state.cat = b.dataset.cat;
   else if (b.dataset.toggle) state[b.dataset.toggle] = !state[b.dataset.toggle];
   render();
 });
 $('#q').addEventListener('input', e => { state.q = e.target.value.trim().toLowerCase(); renderGrid(); });
-function clearFilters(){ state.faction = 'all'; state.cat = 'all'; state.favOnly = false; state.clipsOnly = false; state.q = ''; $('#q').value = ''; render(); }
+function clearFilters(){ state.faction = 'all'; state.favOnly = false; state.clipsOnly = false; state.q = ''; $('#q').value = ''; render(); }
 
 /* header controls */
 const masterEl = $('#master');
@@ -844,21 +834,20 @@ const dlg = $('#editor');
 let editing = null; // working copy
 function fillSelects(){
   $('#ed-faction').innerHTML = Object.entries(FACTIONS).map(([k, f]) => `<option value="${k}">${f.label}</option>`).join('');
-  $('#ed-cat').innerHTML = Object.entries(CATS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('');
   $('#ed-preset').innerHTML = Object.entries(FACTIONS).map(([fk, f]) =>
-    `<optgroup label="${f.label}">` + Object.entries(PRESETS).filter(([, pr]) => pr.faction === fk).map(([k, pr]) => `<option value="${k}">${esc(pr.label)}</option>`).join('') + '</optgroup>').join('');
+    `<optgroup label="${f.label}">` + Object.entries(PRESETS).filter(([, pr]) => pr.faction === fk).map(([k, pr]) => `<option value="${k}">${esc(pr.label)}</option>`).join('') + '</optgroup>').join('') +
+    '<optgroup label="Other">' + Object.entries(PRESETS).filter(([, pr]) => !FACTIONS[pr.faction]).map(([k, pr]) => `<option value="${k}">${esc(pr.label)}</option>`).join('') + '</optgroup>';
 }
 function openEditor(id){
   const src = id ? state.pads.find(p => p.id === id) : null;
   editing = src ? { ...src } : {
-    id: uid(), name: 'New key', faction: state.faction !== 'all' ? state.faction : 'neutral', cat: state.cat !== 'all' ? state.cat : 'alerts',
+    id: uid(), name: 'New key', faction: state.faction !== 'all' ? state.faction : 'terran',
     kind: 'synth', preset: 'click', text: '', fileId: '', fileName: '', key: '', vol: 1, pitch: 1, color: '', fav: false, _new: true,
   };
   pendingClip = null; bufCache.delete('pending');
   $('#ed-title').textContent = src ? 'Edit key' : 'New key';
   $('#ed-name').value = editing.name;
   $('#ed-faction').value = editing.faction;
-  $('#ed-cat').value = editing.cat;
   $('#ed-preset').value = editing.preset;
   $('#ed-text').value = editing.text;
   $('#ed-file').value = '';
@@ -886,7 +875,7 @@ function readForm(){
   return {
     ...editing,
     name: $('#ed-name').value.trim() || 'Untitled',
-    faction: $('#ed-faction').value, cat: $('#ed-cat').value,
+    faction: $('#ed-faction').value,
     preset: $('#ed-preset').value, text: $('#ed-text').value.trim(),
     vol: Number($('#ed-vol').value), pitch: Number($('#ed-pitch').value),
     color: $('#ed-color').value.toLowerCase() === factionHex ? '' : $('#ed-color').value,
@@ -1037,8 +1026,8 @@ $('#bulk-file').addEventListener('change', async e => {
       Object.assign(match, { kind:'file', fileId:id, fileName:f.name, cloudPath:'' });
       replaced++;
     } else {
-      const faction = /terran|marine|scv|tank|nuke|ghost|cruiser/.test(n) ? 'terran' : /protoss|zealot|probe|pylon|carrier|templar/.test(n) ? 'protoss' : /zerg|drone|larva|overlord|hydra|ling|muta/.test(n) ? 'zerg' : 'neutral';
-      state.pads.push(normalizePad({ id: uid(), name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 40), faction, cat: 'voice', kind: 'file', fileId: id, fileName: f.name }));
+      const faction = /terran|marine|scv|tank|nuke|ghost|cruiser/.test(n) ? 'terran' : /protoss|zealot|probe|pylon|carrier|templar/.test(n) ? 'protoss' : /zerg|drone|larva|overlord|hydra|ling|muta|ultra/.test(n) ? 'zerg' : state.faction !== 'all' ? state.faction : 'terran';
+      state.pads.push(normalizePad({ id: uid(), name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 40), faction, kind: 'file', fileId: id, fileName: f.name }));
       added++;
     }
   }
