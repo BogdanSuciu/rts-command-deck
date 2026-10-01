@@ -93,17 +93,34 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 
 ## Mission tracker
 
-Switch to **Mission tracker** with the tab under the header (or open the site with `#mission`). It tracks one tabletop game at a time, for StarCraft: The Miniatures Game or any similar skirmish game:
+Switch to **Mission tracker** with the tab under the header (or open the site with `#mission`). It follows one tabletop game at a time, for StarCraft: The Miniatures Game or any similar skirmish game, through its rounds and phases.
 
-- **Round and phase:** round counter with a round limit, a phase stepper (**Next phase**), and **End round & score**.
-- **Two players:** name, faction, initiative, victory points (±1) and resource counters (±1/±5), such as minerals, gas or supply.
-- **Objectives:** set who holds each one (None / player 1 / player 2). **End round & score** gives each objective's VP to its holder. The mission ends after the last round, or as soon as a player reaches the VP target, with a "Mission complete" banner.
-- **Battle log:** scoring, captures, VP changes and your own notes, each stamped with round and time.
-- **Sound cues:** in **Mission setup**, pick keys from your board to play on a new round, next phase, objective taken and mission complete. Starred keys (★) show under **Quick sounds**, and hotkeys keep working on this screen.
-- **Missions you define:** **Mission setup** edits the mission name, rounds, VP target, phases, resources and objectives (name and VP per round). **Save as mission** keeps it for reuse; pick it later from **Start from a saved mission**. The app ships only a generic starter mission, so enter the official mission's details from your rulebook or mission cards.
-- **New game** (click twice to confirm) resets scores, resources, objectives and the log, keeping the mission and player names.
+### Game flow
 
-The tracker is saved in the browser (`rtsdeck.tracker`) and, when Cloud is connected, with the board in the database (`deck_settings.tracker`), so a phone at the table and a laptop see the same game.
+- **Phases in order:** **Next phase** steps through the mission's phases. Only on the last phase does the button become **End round & score**, which gives each objective's VP to its holder and starts the next round. Both buttons show how many checklist steps are still open in the current phase.
+- **Phase checklists:** each phase can list steps (for example "Collect resources", "Remove casualties"). They show only during their phase and are cleared at the start of every round.
+- **Items shown only when they apply:** each resource, each objective and the initiative control can be limited to certain phases. Outside those phases they're hidden, and the header says how many items are hidden. **Show all** reveals them for corrections, marked "other phase".
+- **Start of each round:** the tracker applies the mission's round-start rules and writes them to the log:
+  - resources: keep their value, **reset to** a number (such as supply), or **add** a number (such as income);
+  - objectives marked "Nobody holds it at the start of each round" lose their controller;
+  - initiative stays, **passes to the other player**, or is **decided again** (the tracker then asks who has it).
+- **End of the mission:** after the last round, or as soon as a player reaches the VP target. A "Mission complete" banner shows the result.
+- **◀ Back** steps back one phase, or into the previous round's last phase. Scores and round-start changes aren't undone, so adjust them by hand if needed. On a finished game it reopens the mission.
+
+### Players, objectives, log and sounds
+
+- **Two players:** name, faction, initiative, victory points (±1) and resource counters (±1/±5).
+- **Objectives:** set who holds each one (None / player 1 / player 2).
+- **Battle log:** scoring, captures, VP changes, round starts and your own notes, each stamped with round and time.
+- **Sound cues:** pick keys from your board to play on a new round, next phase, objective taken and mission complete. Starred keys (★) show under **Quick sounds**, and hotkeys keep working on this screen.
+
+### Missions
+
+**Mission setup** edits the whole mission: name, rounds, VP target, phases (with steps, reorderable), resources and their round-start rule, objectives with VP per round, and the phases each item is shown in, plus initiative and sound cues. **Save as mission** keeps it for reuse; pick it later from **Start from a saved mission**. The app ships only a generic starter mission, so enter the official mission's phases, objectives and round rules from your rulebook or mission cards.
+
+To start a new game: pick the mission in **Mission setup** and **Apply**, then click **New game** twice. That resets round, scores, resources, objectives and the log, keeping player names, and applies the round-start rules for round 1.
+
+The tracker is saved in the browser (`rtsdeck.tracker`) and, when Cloud is connected, with the board in the database (`deck_settings.tracker`), so a phone at the table and a laptop see the same game. Missions saved by earlier versions are converted automatically.
 
 ## Where your data lives
 

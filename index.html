@@ -288,6 +288,26 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
   .m-top,.m-cols,.m-players{grid-template-columns:1fr}
 }
 #view-board{display:flex; flex-direction:column; gap:16px}
+.m-steps{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; padding:10px 12px; border-radius:8px; background:var(--well); border:1px solid #2a323a}
+.m-steps .lbl{width:100%}
+.step{display:inline-flex; gap:8px; align-items:center; font-size:14px; cursor:pointer}
+.step input{width:18px; height:18px; accent-color:var(--lcd)}
+.step.done{color:var(--ink-faint); text-decoration:line-through}
+.m-hidden-note{font-size:12.5px; color:var(--ink-dim)}
+.m-alert{grid-column:1 / -1; margin:0; padding:10px 14px; border-radius:8px; border:1px solid var(--hazard); color:var(--hazard); font-weight:600}
+.init-tag{font:600 11px var(--f-display); letter-spacing:.1em; text-transform:uppercase; color:var(--hazard)}
+em.off{font-style:normal; font-size:11px; color:var(--ink-faint)}
+.s-card{background:var(--well); border:1px solid #2a323a; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:8px}
+.s-line{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.s-line.check{font-size:13.5px; color:var(--ink-dim); gap:8px}
+.s-card input[type=text],.s-card input[type=number],.s-card select,.s-card textarea{font:14px var(--f-body); color:var(--ink); background:var(--chassis); border:1px solid #2a323a; border-radius:7px; padding:7px 9px; min-width:0}
+.s-card textarea{width:100%; resize:vertical; font-size:13px}
+.s-card .grow{flex:1 1 140px}
+.s-card .num{width:76px}
+.key.sm{font-size:10.5px; padding:6px 8px 5px; gap:6px; box-shadow:0 2px 0 #050708}
+.field .s-card .s-line select,.field .s-card .s-line input{width:auto}
+.field .s-card .s-line input.num{width:76px}
+.field .s-card .s-line .grow{width:auto; flex:1 1 140px}
 @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
 </head>
@@ -345,11 +365,14 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       </div>
       <div class="lcd m-round" aria-live="polite"><span class="lbl" style="color:var(--lcd-dim)">Round</span><span class="big" id="m-round">1</span><span class="of" id="m-rounds">/ 5</span></div>
       <div class="m-phases" id="m-phases"></div>
+      <div class="m-steps" id="m-steps" hidden></div>
       <div class="banner" id="m-banner" hidden></div>
       <div class="m-row m-actions">
         <button class="key primary" id="m-next">Next phase ▶</button>
-        <button class="key" id="m-endround">End round &amp; score</button>
-        <button class="key" id="m-prevround" title="Go back a round (no scoring is undone)">◀ Round</button>
+        <button class="key primary" id="m-endround" hidden>End round &amp; score</button>
+        <button class="key" id="m-back" title="Step back one phase. Nothing is undone; adjust scores by hand if needed.">◀ Back</button>
+        <button class="key" id="m-showall" aria-pressed="false" style="--lamp:var(--hazard)" title="Show items that aren't used in this phase"><span class="lamp"></span>Show all</button>
+        <span class="m-hidden-note" id="m-hidden-note"></span>
         <span style="flex:1"></span>
         <button class="key" id="m-setup-btn">Mission setup</button>
         <button class="key danger" id="m-newgame">New game</button>
@@ -362,7 +385,7 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       <div class="plate">
         <h3>Objectives</h3>
         <div class="obj-table" id="m-objs"></div>
-        <p class="m-sub">“End round &amp; score” gives each objective's VP to whoever controls it.</p>
+        <p class="m-sub">“End round &amp; score” on the last phase gives each objective's VP to whoever holds it.</p>
       </div>
       <div class="plate">
         <h3>Battle log</h3>
@@ -433,12 +456,22 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       <label class="field full" for="ms-name"><span class="lbl">Mission name</span><input type="text" id="ms-name" maxlength="60" required></label>
       <label class="field" for="ms-rounds"><span class="lbl">Rounds</span><input type="number" id="ms-rounds" min="1" max="20" step="1"></label>
       <label class="field" for="ms-target"><span class="lbl">VP to win (0 = play all rounds)</span><input type="number" id="ms-target" min="0" max="999" step="1"></label>
-      <label class="field full" for="ms-phases"><span class="lbl">Phases, one per line</span><textarea id="ms-phases" rows="4"></textarea></label>
-      <label class="field full" for="ms-res"><span class="lbl">Resources tracked per player, one per line</span><textarea id="ms-res" rows="3"></textarea></label>
-      <div class="field full"><span class="lbl">Objectives (name · VP each round they're held)</span>
-        <div class="s-list" id="ms-objs"></div>
-        <div><button type="button" class="key" id="ms-add-obj" style="margin-top:6px">+ Add objective</button></div>
+      <div class="field full"><span class="lbl">Phases, in order</span>
+        <span class="note">Steps are a checklist shown during their phase and cleared at the start of each round.</span>
+        <div class="s-list" id="ms-phases"></div>
+        <div><button type="button" class="key" id="ms-add-phase">+ Add phase</button></div>
       </div>
+      <div class="field full"><span class="lbl">Resources per player</span>
+        <span class="note">Choose what happens to each at the start of a round, and in which phases it's shown.</span>
+        <div class="s-list" id="ms-res"></div>
+        <div><button type="button" class="key" id="ms-add-res">+ Add resource</button></div>
+      </div>
+      <div class="field full"><span class="lbl">Objectives</span>
+        <span class="note">Scored at the end of each round for whoever holds them.</span>
+        <div class="s-list" id="ms-objs"></div>
+        <div><button type="button" class="key" id="ms-add-obj">+ Add objective</button></div>
+      </div>
+      <div class="field full"><span class="lbl">Initiative</span><div id="ms-init"></div></div>
       <div class="field full"><span class="lbl">Sound cues (keys from your board)</span></div>
       <label class="field" for="ms-cue-round"><span class="lbl">New round</span><select id="ms-cue-round" data-cue="round"></select></label>
       <label class="field" for="ms-cue-phase"><span class="lbl">Next phase</span><select id="ms-cue-phase" data-cue="phase"></select></label>
@@ -1441,16 +1474,32 @@ $('#cloud-off').addEventListener('click', () => {
 });
 
 /* ================= mission tracker ================= */
-// Tracks one game at a time: rounds and phases, two players' VP and resources, objective control
-// and a battle log. Missions are fully editable and can be saved as reusable templates.
-// Stored in localStorage and, when Cloud is connected, alongside the board.
+// Follows one game through its rounds and phases. A mission defines the flow: phases (each with an optional
+// step checklist), per-player resources, objectives and initiative. Each of those can be limited to certain
+// phases (hidden otherwise) and given a rule for the start of each round (reset, add, clear, pass on).
+// The app ships only a generic mission; players enter the real mission rules in Mission setup.
 const TRACK_KEY = 'rtsdeck.tracker';
 const MAX_LOG = 200;
+const RES_START = { keep: 'Keep value', set: 'Reset to', add: 'Add' };
+const INIT_START = { keep: 'Stays with the holder', alternate: 'Passes to the other player', clear: 'Is decided again' };
 const DEFAULT_MISSION = {
   mission: 'Custom mission', rounds: 5, vpToWin: 0,
-  phases: ['Command', 'Movement', 'Combat', 'Scoring'],
-  resources: ['Minerals', 'Vespene gas'],
-  objectives: [{ id: 'o1', name: 'Objective A', vp: 1 }, { id: 'o2', name: 'Objective B', vp: 1 }, { id: 'o3', name: 'Center', vp: 2 }],
+  phases: [
+    { id: 'ph1', name: 'Command', steps: ['Decide initiative', 'Collect resources'] },
+    { id: 'ph2', name: 'Movement', steps: [] },
+    { id: 'ph3', name: 'Combat', steps: [] },
+    { id: 'ph4', name: 'Scoring', steps: ['Check who holds each objective'] },
+  ],
+  resources: [
+    { name: 'Minerals', phases: [], roundStart: 'keep', value: 0 },
+    { name: 'Vespene gas', phases: [], roundStart: 'keep', value: 0 },
+  ],
+  objectives: [
+    { id: 'o1', name: 'Objective A', vp: 1, phases: [], clearEachRound: false },
+    { id: 'o2', name: 'Objective B', vp: 1, phases: [], clearEachRound: false },
+    { id: 'o3', name: 'Center', vp: 2, phases: [], clearEachRound: false },
+  ],
+  initiative: { phases: ['ph1'], roundStart: 'keep' },
   cues: { round: '', phase: '', capture: '', end: '' },
 };
 const tracker = { config: null, game: null, templates: [] };
@@ -1458,27 +1507,45 @@ const clean = (v, max) => String(v ?? '').trim().slice(0, max);
 const clampInt = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 const uniqList = (arr, max, len) => [...new Set((Array.isArray(arr) ? arr : []).map(x => clean(x, len)).filter(Boolean))].slice(0, max);
 
+// Accepts current and older configs (older ones stored phases and resources as plain names).
 function normConfig(c){
   c = c && typeof c === 'object' ? c : {};
+  const seen = new Set();
+  let phases = (Array.isArray(c.phases) ? c.phases : []).map(ph => typeof ph === 'string' ? { name: ph } : ph)
+    .filter(ph => ph && clean(ph.name, 24)).slice(0, 10)
+    .map(ph => {
+      let id = clean(ph.id, 24);
+      if (!id || seen.has(id)) id = 'ph' + uid();
+      seen.add(id);
+      return { id, name: clean(ph.name, 24), steps: uniqList(typeof ph.steps === 'string' ? ph.steps.split('\n') : ph.steps, 8, 80) };
+    });
+  if (!phases.length) phases = [{ id: 'ph1', name: 'Round', steps: [] }];
+  const ids = new Set(phases.map(p => p.id));
+  const refs = a => [...new Set((Array.isArray(a) ? a : []).filter(x => ids.has(x)))];
+  const resNames = new Set();
+  const resources = (Array.isArray(c.resources) ? c.resources : []).map(r => typeof r === 'string' ? { name: r } : r)
+    .filter(r => r && clean(r.name, 24) && !resNames.has(clean(r.name, 24).toLowerCase()) && resNames.add(clean(r.name, 24).toLowerCase())).slice(0, 6)
+    .map(r => ({ name: clean(r.name, 24), phases: refs(r.phases), roundStart: RES_START[r.roundStart] ? r.roundStart : 'keep', value: clampInt(r.value, -999, 9999, 0) }));
   const objectives = (Array.isArray(c.objectives) ? c.objectives : []).filter(o => o && clean(o.name, 40)).slice(0, 12)
-    .map(o => ({ id: clean(o.id, 24) || uid(), name: clean(o.name, 40), vp: clampInt(o.vp, 0, 99, 1) }));
+    .map(o => ({ id: clean(o.id, 24) || uid(), name: clean(o.name, 40), vp: clampInt(o.vp, 0, 99, 1), phases: refs(o.phases), clearEachRound: !!o.clearEachRound }));
+  const ini = c.initiative && typeof c.initiative === 'object' ? c.initiative : {};
   const cues = {};
   for (const k of ['round', 'phase', 'capture', 'end']) cues[k] = clean(c.cues && c.cues[k], 64);
-  const phases = uniqList(c.phases, 10, 24), resources = uniqList(c.resources, 6, 24);
   return {
     mission: clean(c.mission, 60) || DEFAULT_MISSION.mission,
     rounds: clampInt(c.rounds, 1, 20, DEFAULT_MISSION.rounds),
     vpToWin: clampInt(c.vpToWin, 0, 999, 0),
-    phases: phases.length ? phases : ['Round'], resources, objectives, cues,
+    phases, resources, objectives, cues,
+    initiative: { phases: refs(ini.phases), roundStart: INIT_START[ini.roundStart] ? ini.roundStart : 'keep' },
   };
 }
 function freshGame(cfg, prev){
   return {
-    round: 1, phase: 0, over: false, initiative: 0, control: {}, log: [],
+    round: 1, phase: 0, over: false, initiative: 0, control: {}, checks: {}, showAll: false, log: [],
     players: [0, 1].map(i => ({
       name: (prev && prev.players[i] && prev.players[i].name) || `Player ${i + 1}`,
       faction: (prev && prev.players[i] && prev.players[i].faction) || (i ? 'zerg' : 'terran'),
-      vp: 0, res: Object.fromEntries(cfg.resources.map(r => [r, 0])),
+      vp: 0, res: Object.fromEntries(cfg.resources.map(r => [r.name, 0])),
     })),
   };
 }
@@ -1486,15 +1553,17 @@ function normGame(g, cfg){
   if (!g || typeof g !== 'object' || !Array.isArray(g.players) || g.players.length !== 2) return freshGame(cfg);
   const control = {};
   for (const o of cfg.objectives) { const v = g.control && g.control[o.id]; if (v === 0 || v === 1) control[o.id] = v; }
+  const checks = {};
+  for (const ph of cfg.phases) ph.steps.forEach((_, i) => { if (g.checks && g.checks[`${ph.id}:${i}`]) checks[`${ph.id}:${i}`] = true; });
   return {
     round: clampInt(g.round, 1, cfg.rounds, 1), phase: clampInt(g.phase, 0, cfg.phases.length - 1, 0), over: !!g.over,
-    initiative: g.initiative === 1 ? 1 : 0, control,
+    initiative: [0, 1, -1].includes(g.initiative) ? g.initiative : 0, control, checks, showAll: !!g.showAll,
     log: (Array.isArray(g.log) ? g.log : []).slice(0, MAX_LOG).map(e => ({ t: Number(e.t) || Date.now(), r: clampInt(e.r, 0, 99, 0), text: clean(e.text, 200) })),
     players: g.players.map((p, i) => ({
       name: clean(p && p.name, 24) || `Player ${i + 1}`,
       faction: FACTIONS[p && p.faction] ? p.faction : (i ? 'zerg' : 'terran'),
       vp: clampInt(p && p.vp, -99, 999, 0),
-      res: Object.fromEntries(cfg.resources.map(r => [r, clampInt(p && p.res && p.res[r], -999, 9999, 0)])),
+      res: Object.fromEntries(cfg.resources.map(r => [r.name, clampInt(p && p.res && p.res[r.name], -999, 9999, 0)])),
     })),
   };
 }
@@ -1507,7 +1576,7 @@ function applyTrackerData(t){
 }
 function loadTracker(){
   try { applyTrackerData(JSON.parse(localStorage.getItem(TRACK_KEY) || 'null')); } catch (e) {}
-  if (!tracker.config) { tracker.config = normConfig(DEFAULT_MISSION); tracker.game = freshGame(tracker.config); }
+  if (!tracker.config) { tracker.config = normConfig(DEFAULT_MISSION); tracker.game = freshGame(tracker.config); startRound(true); }
 }
 let trackerSaveTimer = null;
 function saveTracker(){
@@ -1517,7 +1586,12 @@ function saveTracker(){
 }
 
 const G = () => tracker.game, C = () => tracker.config;
-const phaseName = () => C().phases[G().phase] || '';
+const pname = i => G().players[i].name;
+const curPhase = () => C().phases[G().phase];
+// An item limited to some phases is shown only during them (or always with Show all, or once the game is over).
+const inPhase = item => !item.phases.length || item.phases.includes(curPhase().id);
+const shown = item => G().over || G().showAll || inPhase(item);
+const phaseNames = ids => ids.map(id => (C().phases.find(p => p.id === id) || {}).name).filter(Boolean).join(', ');
 function addLog(text){
   G().log.unshift({ t: Date.now(), r: G().round, text: clean(text, 200) });
   if (G().log.length > MAX_LOG) G().log.length = MAX_LOG;
@@ -1526,12 +1600,26 @@ function playCue(kind){
   const pad = state.pads.find(p => p.id === C().cues[kind]);
   if (pad) trigger(pad);
 }
-const pname = i => G().players[i].name;
-// Mission ends when the last round is scored or someone reaches the VP target.
+// Start of a round: back to the first phase, clear the step checklist and apply each round-start rule.
+function startRound(quiet){
+  const g = G(), c = C(), notes = [];
+  g.phase = 0; g.checks = {};
+  for (const r of c.resources) {
+    if (r.roundStart === 'keep') continue;
+    g.players.forEach(p => { p.res[r.name] = r.roundStart === 'set' ? r.value : (p.res[r.name] || 0) + r.value; });
+    notes.push(r.roundStart === 'set' ? `${r.name} reset to ${r.value}` : `${r.name} ${r.value >= 0 ? '+' : ''}${r.value} each`);
+  }
+  const cleared = c.objectives.filter(o => o.clearEachRound && g.control[o.id] !== undefined);
+  cleared.forEach(o => { delete g.control[o.id]; });
+  if (cleared.length) notes.push(`${cleared.map(o => o.name).join(', ')} no longer held`);
+  if (c.initiative.roundStart === 'alternate' && g.round > 1 && g.initiative >= 0) { g.initiative = 1 - g.initiative; notes.push(`initiative passes to ${pname(g.initiative)}`); }
+  else if (c.initiative.roundStart === 'clear') { g.initiative = -1; notes.push('decide initiative'); }
+  addLog(`Round ${g.round} begins: ${c.phases[0].name} phase.${notes.length ? ' ' + notes.join('; ') + '.' : ''}`);
+  if (!quiet) playCue('round');
+}
 function checkEnd(){
   const g = G(), c = C();
-  const [a, b] = g.players.map(p => p.vp);
-  const reached = c.vpToWin > 0 && (a >= c.vpToWin || b >= c.vpToWin);
+  const reached = c.vpToWin > 0 && g.players.some(p => p.vp >= c.vpToWin);
   if (!reached) return false;
   g.over = true;
   addLog(`Mission complete: ${resultText()}.`);
@@ -1546,30 +1634,51 @@ function resultText(){
 }
 
 function renderMission(){
-  const g = G(), c = C();
+  const g = G(), c = C(), ph = curPhase();
+  const last = g.phase >= c.phases.length - 1;
   $('#m-name').textContent = c.mission;
   $('#m-sub').textContent = `${c.rounds} rounds${c.vpToWin ? ` · first to ${c.vpToWin} VP wins` : ''} · ${c.objectives.length} objective${c.objectives.length === 1 ? '' : 's'}`;
   $('#m-round').textContent = g.round;
   $('#m-rounds').textContent = `/ ${c.rounds}`;
-  $('#m-phases').innerHTML = c.phases.map((ph, i) =>
-    `<span class="m-phase${i < g.phase ? ' done' : ''}${i === g.phase && !g.over ? ' now' : ''}">${esc(ph)}</span>`).join('');
-  const lastPhase = g.phase >= c.phases.length - 1;
-  $('#m-next').disabled = g.over || lastPhase;
-  $('#m-next').textContent = lastPhase ? 'Last phase' : `Next: ${c.phases[g.phase + 1]} ▶`;
-  $('#m-endround').disabled = g.over;
-  $('#m-endround').textContent = g.round >= c.rounds ? 'End final round & score' : 'End round & score';
-  $('#m-prevround').disabled = g.round <= 1 && !g.over;
+  $('#m-phases').innerHTML = c.phases.map((p, i) =>
+    `<span class="m-phase${i < g.phase ? ' done' : ''}${i === g.phase && !g.over ? ' now' : ''}">${esc(p.name)}</span>`).join('');
+
+  // Checklist for the current phase
+  const open = ph.steps.filter((_, i) => !g.checks[`${ph.id}:${i}`]).length;
+  $('#m-steps').hidden = g.over || !ph.steps.length;
+  $('#m-steps').innerHTML = ph.steps.length ? `<span class="lbl">${esc(ph.name)} steps</span>` + ph.steps.map((s, i) => {
+    const k = `${ph.id}:${i}`;
+    return `<label class="step${g.checks[k] ? ' done' : ''}"><input type="checkbox" data-step="${esc(k)}"${g.checks[k] ? ' checked' : ''}> ${esc(s)}</label>`;
+  }).join('') : '';
+
+  // Flow buttons: Next phase until the last phase, then End round & score
+  $('#m-next').hidden = g.over || last;
+  $('#m-next').textContent = last ? '' : `Next: ${c.phases[g.phase + 1].name} ▶${open ? ` (${open} step${open > 1 ? 's' : ''} open)` : ''}`;
+  $('#m-endround').hidden = g.over || !last;
+  $('#m-endround').textContent = `${g.round >= c.rounds ? 'End final round' : `End round ${g.round}`} & score${open ? ` (${open} step${open > 1 ? 's' : ''} open)` : ''}`;
+  $('#m-back').disabled = !g.over && g.round <= 1 && g.phase === 0;
+  $('#m-back').textContent = g.over ? '◀ Reopen' : '◀ Back';
+  $('#m-showall').setAttribute('aria-pressed', g.showAll);
   const banner = $('#m-banner');
   banner.hidden = !g.over;
   if (g.over) banner.textContent = `Mission complete · ${resultText()}`;
 
-  $('#m-players').innerHTML = g.players.map((p, i) => `
+  // How many items this phase hides
+  const hiddenCount = g.over ? 0 : c.resources.filter(r => !inPhase(r)).length + c.objectives.filter(o => !inPhase(o)).length + (inPhase(c.initiative) ? 0 : 1);
+  $('#m-hidden-note').textContent = hiddenCount ? (g.showAll ? `Showing ${hiddenCount} item${hiddenCount > 1 ? 's' : ''} not used in this phase` : `${hiddenCount} item${hiddenCount > 1 ? 's' : ''} hidden in this phase`) : '';
+  $('#m-showall').hidden = !hiddenCount;
+
+  const iniShown = shown(c.initiative);
+  $('#m-players').innerHTML = g.players.map((p, i) => {
+    const res = c.resources.filter(shown);
+    return `
     <div class="plate player${g.initiative === i ? ' has-init' : ''}" style="--pc:${FACTIONS[p.faction].hex}" data-player="${i}">
       <div class="p-head">
         <span class="p-led"></span>
         <input class="p-name" id="m-pname-${i}" value="${esc(p.name)}" maxlength="24" aria-label="Player ${i + 1} name">
         <select id="m-pfaction-${i}" aria-label="${esc(p.name)} faction">${Object.entries(FACTIONS).map(([k, f]) => `<option value="${k}"${k === p.faction ? ' selected' : ''}>${f.label}</option>`).join('')}</select>
-        <button class="key init" type="button" data-init="${i}" aria-pressed="${g.initiative === i}"><span class="lamp"></span>Initiative</button>
+        ${iniShown ? `<button class="key init" type="button" data-init="${i}" aria-pressed="${g.initiative === i}"><span class="lamp"></span>Initiative</button>`
+          : g.initiative === i ? '<span class="init-tag">Has initiative</span>' : ''}
       </div>
       <div class="p-vp">
         <span class="lbl">VP</span>
@@ -1577,23 +1686,26 @@ function renderMission(){
         <span class="digits" aria-live="polite" aria-label="${esc(p.name)} victory points">${p.vp}</span>
         <button class="mini" type="button" data-vp="${i}" data-d="1" aria-label="${esc(p.name)} plus 1 VP">+1</button>
       </div>
-      ${c.resources.length ? `<div class="res">${c.resources.map(r => `
-        <span class="r-name">${esc(r)}</span>
+      ${res.length ? `<div class="res">${res.map(r => `
+        <span class="r-name">${esc(r.name)}${inPhase(r) ? '' : ' <em class="off">other phase</em>'}</span>
         <span class="r-ctl">
-          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="-5">−5</button>
-          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="-1">−1</button>
-          <span class="r-val">${p.res[r] ?? 0}</span>
-          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="1">+1</button>
-          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="5">+5</button>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r.name)}" data-d="-5">−5</button>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r.name)}" data-d="-1">−1</button>
+          <span class="r-val">${p.res[r.name] ?? 0}</span>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r.name)}" data-d="1">+1</button>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r.name)}" data-d="5">+5</button>
         </span>`).join('')}</div>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  if (iniShown && g.initiative < 0 && !g.over) $('#m-players').insertAdjacentHTML('afterbegin', '<p class="m-alert">Decide who has the initiative this round.</p>');
 
-  $('#m-objs').innerHTML = c.objectives.length ? c.objectives.map(o => {
+  const objs = c.objectives.filter(shown);
+  $('#m-objs').innerHTML = objs.length ? objs.map(o => {
     const who = g.control[o.id];
     const btn = (v, label, color) => `<button class="key" type="button" data-obj="${esc(o.id)}" data-who="${v}" aria-pressed="${who === v || (v === -1 && who === undefined)}" style="--lamp:${color}"><span class="lamp"></span>${esc(label)}</button>`;
-    return `<div class="obj"><span><span class="o-name">${esc(o.name)}</span><span class="o-vp">${o.vp} VP/round</span></span>
+    return `<div class="obj"><span><span class="o-name">${esc(o.name)}</span><span class="o-vp">${o.vp} VP/round${o.clearEachRound ? ' · resets each round' : ''}${inPhase(o) ? '' : ' · other phase'}</span></span>
       <span class="seg">${btn(-1, 'None', 'var(--ink-dim)')}${btn(0, pname(0), FACTIONS[g.players[0].faction].hex)}${btn(1, pname(1), FACTIONS[g.players[1].faction].hex)}</span></div>`;
-  }).join('') : '<p class="empty-note">No objectives. Add them in Mission setup.</p>';
+  }).join('') : `<p class="empty-note">${c.objectives.length ? `Objectives aren't used in the ${esc(ph.name)} phase.` : 'No objectives. Add them in Mission setup.'}</p>`;
 
   $('#m-log').innerHTML = g.log.length ? g.log.map(e =>
     `<li><span class="l-when">R${e.r} · ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><span>${esc(e.text)}</span></li>`).join('')
@@ -1632,6 +1744,10 @@ missionView.addEventListener('click', e => {
 });
 missionView.addEventListener('change', e => {
   const t = e.target, g = G();
+  if (t.dataset.step) {
+    if (t.checked) g.checks[t.dataset.step] = true; else delete g.checks[t.dataset.step];
+    saveTracker(); renderMission(); return;
+  }
   const m = t.id.match(/^m-p(name|faction)-(\d)$/); if (!m) return;
   const p = g.players[+m[2]];
   if (m[1] === 'name') p.name = clean(t.value, 24) || `Player ${+m[2] + 1}`;
@@ -1641,28 +1757,32 @@ missionView.addEventListener('change', e => {
 $('#m-next').addEventListener('click', () => {
   const g = G(), c = C();
   if (g.over || g.phase >= c.phases.length - 1) return;
-  g.phase++; addLog(`${c.phases[g.phase]} phase.`); playCue('phase');
+  g.phase++; addLog(`${c.phases[g.phase].name} phase.`); playCue('phase');
   saveTracker(); renderMission();
 });
 $('#m-endround').addEventListener('click', () => {
   const g = G(), c = C();
-  if (g.over) return;
+  if (g.over || g.phase < c.phases.length - 1) return;
   const gains = [0, 0];
   for (const o of c.objectives) { const who = g.control[o.id]; if (who === 0 || who === 1) gains[who] += o.vp; }
   gains.forEach((v, i) => { g.players[i].vp += v; });
   addLog(`Round ${g.round} scored: ${pname(0)} +${gains[0]}, ${pname(1)} +${gains[1]} (${g.players[0].vp}–${g.players[1].vp}).`);
   if (!checkEnd()) {
     if (g.round >= c.rounds) { g.over = true; addLog(`Mission complete: ${resultText()}.`); playCue('end'); }
-    else { g.round++; g.phase = 0; addLog(`Round ${g.round} begins. ${c.phases[0]} phase.`); playCue('round'); }
+    else { g.round++; startRound(); }
   }
   saveTracker(); renderMission();
 });
-$('#m-prevround').addEventListener('click', () => {
-  const g = G();
+// Step back one phase (or to the last phase of the previous round, or reopen a finished game).
+// Nothing is undone: scores and round-start changes stay, adjust them by hand if needed.
+$('#m-back').addEventListener('click', () => {
+  const g = G(), c = C();
   if (g.over) { g.over = false; addLog('Mission reopened.'); }
-  else if (g.round > 1) { g.round--; g.phase = 0; addLog(`Back to round ${g.round}. Scores are unchanged; adjust VP by hand if needed.`); }
+  else if (g.phase > 0) { g.phase--; addLog(`Back to the ${c.phases[g.phase].name} phase.`); }
+  else if (g.round > 1) { g.round--; g.phase = c.phases.length - 1; addLog(`Back to round ${g.round}, ${c.phases[g.phase].name} phase. Scores are unchanged.`); }
   saveTracker(); renderMission();
 });
+$('#m-showall').addEventListener('click', () => { G().showAll = !G().showAll; saveTracker(); renderMission(); });
 let newGameArmed = false;
 $('#m-newgame').addEventListener('click', () => {
   if (!newGameArmed) {
@@ -1672,8 +1792,9 @@ $('#m-newgame').addEventListener('click', () => {
   }
   newGameArmed = false; $('#m-newgame').textContent = 'New game';
   tracker.game = freshGame(C(), G());
-  addLog(`New game: ${C().mission}. Round 1, ${C().phases[0]} phase.`);
-  playCue('round'); saveTracker(); renderMission();
+  addLog(`New game: ${C().mission}.`);
+  startRound();
+  saveTracker(); renderMission();
 });
 $('#m-note-form').addEventListener('submit', e => {
   e.preventDefault();
@@ -1682,29 +1803,73 @@ $('#m-note-form').addEventListener('submit', e => {
   saveTracker(); renderMission();
 });
 
-/* mission setup dialog */
+/* mission setup dialog: edits a working copy (msCfg) until Apply */
 const msDlg = $('#m-setup');
-let msObjs = [];
+let msCfg = null;
 function msMsg(t){ const m = $('#ms-msg'); m.textContent = t || ''; m.hidden = !t; }
+const msClone = cfg => JSON.parse(JSON.stringify(cfg));
+function phaseChips(list, k, i){
+  const all = !list.length;
+  const chip = (ph, on, label) => `<button type="button" class="key sm" data-chip="${k}" data-i="${i}" data-ph="${ph}" aria-pressed="${on}" style="--lamp:var(--lcd)"><span class="lamp"></span>${esc(label)}</button>`;
+  return `<div class="s-line"><span class="lbl">Shown in</span>${chip('', all, 'All phases')}${msCfg.phases.map(p => chip(p.id, list.includes(p.id), p.name)).join('')}</div>`;
+}
+function renderSetup(){
+  const P = msCfg.phases, n = P.length;
+  $('#ms-phases').innerHTML = P.map((p, i) => `
+    <div class="s-card">
+      <div class="s-line">
+        <span class="clip-n">${i + 1}</span>
+        <input type="text" class="grow" data-k="phases" data-i="${i}" data-f="name" value="${esc(p.name)}" maxlength="24" aria-label="Phase ${i + 1} name">
+        <button type="button" class="mini" data-move="phases" data-i="${i}" data-d="-1" aria-label="Move phase up" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="mini" data-move="phases" data-i="${i}" data-d="1" aria-label="Move phase down" ${i === n - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="mini danger" data-del="phases" data-i="${i}" aria-label="Remove phase" ${n === 1 ? 'disabled' : ''}>✕</button>
+      </div>
+      <textarea rows="2" data-k="phases" data-i="${i}" data-f="steps" placeholder="Steps for this phase, one per line (optional)" aria-label="${esc(p.name)} steps">${esc((p.steps || []).join('\n'))}</textarea>
+    </div>`).join('');
+  $('#ms-add-phase').disabled = n >= 10;
+
+  $('#ms-res').innerHTML = msCfg.resources.map((r, i) => `
+    <div class="s-card">
+      <div class="s-line">
+        <input type="text" class="grow" data-k="resources" data-i="${i}" data-f="name" value="${esc(r.name)}" maxlength="24" aria-label="Resource ${i + 1} name">
+        <button type="button" class="mini danger" data-del="resources" data-i="${i}" aria-label="Remove resource">✕</button>
+      </div>
+      <div class="s-line"><span class="lbl">Each new round</span>
+        <select data-k="resources" data-i="${i}" data-f="roundStart" aria-label="${esc(r.name)} at the start of each round">${Object.entries(RES_START).map(([k, l]) => `<option value="${k}"${k === r.roundStart ? ' selected' : ''}>${l}</option>`).join('')}</select>
+        <input type="number" class="num" data-k="resources" data-i="${i}" data-f="value" value="${r.value}" ${r.roundStart === 'keep' ? 'hidden' : ''} aria-label="${esc(r.name)} round-start amount">
+      </div>
+      ${phaseChips(r.phases, 'resources', i)}
+    </div>`).join('') || '<p class="empty-note">No resources.</p>';
+  $('#ms-add-res').disabled = msCfg.resources.length >= 6;
+
+  $('#ms-objs').innerHTML = msCfg.objectives.map((o, i) => `
+    <div class="s-card">
+      <div class="s-line">
+        <input type="text" class="grow" data-k="objectives" data-i="${i}" data-f="name" value="${esc(o.name)}" maxlength="40" aria-label="Objective ${i + 1} name">
+        <input type="number" class="num" data-k="objectives" data-i="${i}" data-f="vp" value="${o.vp}" min="0" max="99" aria-label="${esc(o.name)} VP per round"><span class="lbl">VP/round</span>
+        <button type="button" class="mini danger" data-del="objectives" data-i="${i}" aria-label="Remove objective">✕</button>
+      </div>
+      <label class="s-line check"><input type="checkbox" data-k="objectives" data-i="${i}" data-f="clearEachRound"${o.clearEachRound ? ' checked' : ''}> Nobody holds it at the start of each round</label>
+      ${phaseChips(o.phases, 'objectives', i)}
+    </div>`).join('') || '<p class="empty-note">No objectives.</p>';
+  $('#ms-add-obj').disabled = msCfg.objectives.length >= 12;
+
+  $('#ms-init').innerHTML = `
+    <div class="s-card">
+      <div class="s-line"><span class="lbl">Each new round, initiative</span>
+        <select data-k="initiative" data-f="roundStart" aria-label="Initiative at the start of each round">${Object.entries(INIT_START).map(([k, l]) => `<option value="${k}"${k === msCfg.initiative.roundStart ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      ${phaseChips(msCfg.initiative.phases, 'initiative', '')}
+    </div>`;
+}
 function fillSetup(cfg){
+  msCfg = msClone(cfg);
   $('#ms-name').value = cfg.mission;
   $('#ms-rounds').value = cfg.rounds;
   $('#ms-target').value = cfg.vpToWin;
-  $('#ms-phases').value = cfg.phases.join('\n');
-  $('#ms-res').value = cfg.resources.join('\n');
-  msObjs = cfg.objectives.map(o => ({ ...o }));
-  renderSetupObjs();
+  renderSetup();
   const opts = '<option value="">No sound</option>' + state.pads.map(p => `<option value="${esc(p.id)}">${esc(p.name)} (${FACTIONS[p.faction].label})</option>`).join('');
   document.querySelectorAll('#ms-form select[data-cue]').forEach(s => { s.innerHTML = opts; s.value = state.pads.some(p => p.id === cfg.cues[s.dataset.cue]) ? cfg.cues[s.dataset.cue] : ''; });
-}
-function renderSetupObjs(){
-  $('#ms-objs').innerHTML = msObjs.map((o, i) => `
-    <div class="s-obj">
-      <input type="text" data-oname="${i}" value="${esc(o.name)}" maxlength="40" aria-label="Objective ${i + 1} name">
-      <input type="number" data-ovp="${i}" value="${o.vp}" min="0" max="99" aria-label="Objective ${i + 1} VP per round">
-      <button type="button" class="mini danger" data-odel="${i}" aria-label="Remove objective ${i + 1}">✕</button>
-    </div>`).join('') || '<p class="empty-note">No objectives.</p>';
-  $('#ms-add-obj').disabled = msObjs.length >= 12;
 }
 function renderTemplateSelect(){
   $('#ms-template').innerHTML = '<option value="">Current mission</option><option value="__default">Generic starter mission</option>' +
@@ -1712,11 +1877,45 @@ function renderTemplateSelect(){
 }
 function readSetup(){
   return normConfig({
-    mission: $('#ms-name').value, rounds: $('#ms-rounds').value, vpToWin: $('#ms-target').value,
-    phases: $('#ms-phases').value.split('\n'), resources: $('#ms-res').value.split('\n'),
-    objectives: msObjs, cues: Object.fromEntries([...document.querySelectorAll('#ms-form select[data-cue]')].map(s => [s.dataset.cue, s.value])),
+    ...msCfg, mission: $('#ms-name').value, rounds: $('#ms-rounds').value, vpToWin: $('#ms-target').value,
+    cues: Object.fromEntries([...document.querySelectorAll('#ms-form select[data-cue]')].map(s => [s.dataset.cue, s.value])),
   });
 }
+const msTarget = (k, i) => k === 'initiative' ? msCfg.initiative : msCfg[k][+i];
+$('#ms-form').addEventListener('input', e => {
+  const t = e.target, d = t.dataset; if (!d.k || !d.f) return;
+  const item = msTarget(d.k, d.i);
+  if (d.f === 'steps') item.steps = t.value.split('\n');
+  else if (t.type === 'checkbox') item[d.f] = t.checked;
+  else item[d.f] = t.value;
+});
+$('#ms-form').addEventListener('change', e => {
+  const d = e.target.dataset;
+  // Renamed phases update the "Shown in" chips; a round-start choice shows or hides its amount.
+  if ((d.k === 'phases' && d.f === 'name') || d.f === 'roundStart') renderSetup();
+});
+$('#ms-form').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = b.dataset;
+  if (d.chip) {
+    const item = msTarget(d.chip, d.i);
+    if (!d.ph) item.phases = [];
+    else item.phases = item.phases.includes(d.ph) ? item.phases.filter(x => x !== d.ph) : [...item.phases, d.ph];
+    renderSetup();
+  } else if (d.move) {
+    const L = msCfg[d.move], i = +d.i, j = i + +d.d;
+    if (j >= 0 && j < L.length) { [L[i], L[j]] = [L[j], L[i]]; renderSetup(); }
+  } else if (d.del) {
+    const L = msCfg[d.del], [gone] = L.splice(+d.i, 1);
+    if (d.del === 'phases') { // drop references to a removed phase
+      for (const it of [...msCfg.resources, ...msCfg.objectives, msCfg.initiative]) it.phases = it.phases.filter(x => x !== gone.id);
+    }
+    renderSetup();
+  }
+});
+$('#ms-add-phase').addEventListener('click', () => { msCfg.phases.push({ id: 'ph' + uid(), name: `Phase ${msCfg.phases.length + 1}`, steps: [] }); renderSetup(); });
+$('#ms-add-res').addEventListener('click', () => { msCfg.resources.push({ name: `Resource ${msCfg.resources.length + 1}`, phases: [], roundStart: 'keep', value: 0 }); renderSetup(); });
+$('#ms-add-obj').addEventListener('click', () => { msCfg.objectives.push({ id: uid(), name: `Objective ${msCfg.objectives.length + 1}`, vp: 1, phases: [], clearEachRound: false }); renderSetup(); });
 $('#m-setup-btn').addEventListener('click', () => { renderTemplateSelect(); fillSetup(C()); msMsg(''); msDlg.showModal(); });
 $('#ms-cancel').addEventListener('click', () => msDlg.close());
 $('#ms-template').addEventListener('change', e => {
@@ -1724,13 +1923,6 @@ $('#ms-template').addEventListener('change', e => {
   fillSetup(v === '' ? C() : v === '__default' ? normConfig(DEFAULT_MISSION) : tracker.templates[+v]);
   msMsg(v === '' ? '' : 'Loaded. Apply to use it; scores carry over unless you start a new game.');
 });
-$('#ms-objs').addEventListener('input', e => {
-  const t = e.target;
-  if (t.dataset.oname != null) msObjs[+t.dataset.oname].name = t.value;
-  if (t.dataset.ovp != null) msObjs[+t.dataset.ovp].vp = t.value;
-});
-$('#ms-objs').addEventListener('click', e => { const b = e.target.closest('[data-odel]'); if (b) { msObjs.splice(+b.dataset.odel, 1); renderSetupObjs(); } });
-$('#ms-add-obj').addEventListener('click', () => { msObjs.push({ id: uid(), name: `Objective ${msObjs.length + 1}`, vp: 1 }); renderSetupObjs(); $(`[data-oname="${msObjs.length - 1}"]`)?.select(); });
 $('#ms-save-tpl').addEventListener('click', () => {
   const cfg = readSetup();
   const i = tracker.templates.findIndex(t => t.mission.toLowerCase() === cfg.mission.toLowerCase());
@@ -1748,8 +1940,11 @@ $('#ms-del-tpl').addEventListener('click', () => {
 $('#ms-form').addEventListener('submit', e => {
   e.preventDefault();
   const cfg = readSetup(), g = G();
+  const phaseId = curPhase().id;
   tracker.config = cfg;
   tracker.game = normGame(g, cfg); // keeps scores; drops resources and objectives that no longer exist
+  const keepAt = cfg.phases.findIndex(p => p.id === phaseId);
+  if (keepAt >= 0) tracker.game.phase = keepAt; // stay in the same phase if it still exists
   addLog(`Mission set: ${cfg.mission}.`);
   saveTracker(); renderMission(); msDlg.close();
 });
@@ -1766,6 +1961,7 @@ function showView(name){
 }
 $('#tab-board').addEventListener('click', () => showView('board'));
 $('#tab-mission').addEventListener('click', () => showView('mission'));
+window.addEventListener('hashchange', () => { if (location.hash === '#mission' || location.hash === '#board') showView(location.hash.slice(1)); });
 
 /* ================= layout dialog ================= */
 const lay = $('#layout');
