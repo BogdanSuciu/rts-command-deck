@@ -1,6 +1,6 @@
 // Offline support: the app shell is precached; Google Fonts are cached on first use.
 // Bump VERSION whenever any precached file changes so clients pick up the new build.
-const VERSION = 'v8';
+const VERSION = 'v9';
 const SHELL = `shell-${VERSION}`;
 const FONTS = 'fonts';
 const SHELL_FILES = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];

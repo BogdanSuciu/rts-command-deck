@@ -91,10 +91,24 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 - **Layout** copies the board setup as JSON, pastes one back in, or resets to defaults.
 - **Cloud** syncs the board and clips across devices (see above).
 
+## Mission tracker
+
+Switch to **Mission tracker** with the tab under the header (or open the site with `#mission`). It tracks one tabletop game at a time, for StarCraft: The Miniatures Game or any similar skirmish game:
+
+- **Round and phase:** round counter with a round limit, a phase stepper (**Next phase**), and **End round & score**.
+- **Two players:** name, faction, initiative, victory points (±1) and resource counters (±1/±5), such as minerals, gas or supply.
+- **Objectives:** set who holds each one (None / player 1 / player 2). **End round & score** gives each objective's VP to its holder. The mission ends after the last round, or as soon as a player reaches the VP target, with a "Mission complete" banner.
+- **Battle log:** scoring, captures, VP changes and your own notes, each stamped with round and time.
+- **Sound cues:** in **Mission setup**, pick keys from your board to play on a new round, next phase, objective taken and mission complete. Starred keys (★) show under **Quick sounds**, and hotkeys keep working on this screen.
+- **Missions you define:** **Mission setup** edits the mission name, rounds, VP target, phases, resources and objectives (name and VP per round). **Save as mission** keeps it for reuse; pick it later from **Start from a saved mission**. The app ships only a generic starter mission, so enter the official mission's details from your rulebook or mission cards.
+- **New game** (click twice to confirm) resets scores, resources, objectives and the log, keeping the mission and player names.
+
+The tracker is saved in the browser (`rtsdeck.tracker`) and, when Cloud is connected, with the board in the database (`deck_settings.tracker`), so a phone at the table and a laptop see the same game.
+
 ## Where your data lives
 
 - **In the browser:** clips in IndexedDB (database `rtsdeck`, store `clips`); the board in localStorage (`rtsdeck.v1`); the cloud passcode in localStorage (`rtsdeck.cloud`).
-- **In the cloud (when connected):** keys in the `deck_keys` and `deck_settings` tables of this project's Neon database; clips under `clips/…` in its Blob store.
+- **In the cloud (when connected):** keys and mission tracker in the `deck_keys` and `deck_settings` tables of this project's Neon database; clips under `clips/…` in its Blob store.
 
 ## About the sounds
 

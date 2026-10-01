@@ -29,5 +29,6 @@ CREATE TABLE IF NOT EXISTS deck_keys (
 CREATE TABLE IF NOT EXISTS deck_settings (
   id        integer     PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   master    real        NOT NULL DEFAULT 0.8,
-  saved_at  timestamptz NOT NULL DEFAULT now()
+  saved_at  timestamptz NOT NULL DEFAULT now(),
+  tracker   jsonb                                  -- mission tracker: { config, game, templates }
 );

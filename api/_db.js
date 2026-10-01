@@ -26,6 +26,8 @@ export function ensureSchema() {
       // Multiple clips per key (added later; tables created before this get the columns here).
       q`ALTER TABLE deck_keys ADD COLUMN IF NOT EXISTS clips jsonb NOT NULL DEFAULT '[]'::jsonb`,
       q`ALTER TABLE deck_keys ADD COLUMN IF NOT EXISTS play_mode text NOT NULL DEFAULT 'order'`,
+      // Mission tracker state (current game, mission setup, saved missions), stored with the board.
+      q`ALTER TABLE deck_settings ADD COLUMN IF NOT EXISTS tracker jsonb`,
     ]).catch(err => { ready = null; throw err; });
   }
   return ready;
@@ -76,14 +78,18 @@ export async function readBoard() {
   const q = db();
   const [keys, settings] = await q.transaction([
     q`SELECT * FROM deck_keys ORDER BY position, id`,
-    q`SELECT master, saved_at FROM deck_settings WHERE id = 1`,
+    q`SELECT master, saved_at, tracker FROM deck_settings WHERE id = 1`,
   ], { readOnly: true });
   if (!settings.length) return null; // never saved
-  return { pads: keys.map(toPad), master: settings[0].master, savedAt: new Date(settings[0].saved_at).toISOString() };
+  const t = settings[0].tracker;
+  return {
+    pads: keys.map(toPad), master: settings[0].master, savedAt: new Date(settings[0].saved_at).toISOString(),
+    tracker: typeof t === 'string' ? JSON.parse(t) : t || null,
+  };
 }
 
 // Replace the whole board in one transaction: upsert every key, delete keys that are gone.
-export async function writeBoard(pads, master) {
+export async function writeBoard(pads, master, tracker) {
   const rows = [];
   const seen = new Set();
   pads.forEach(p => {
@@ -91,6 +97,7 @@ export async function writeBoard(pads, master) {
     if (r && !seen.has(r.id)) { seen.add(r.id); rows.push(r); }
   });
   const col = k => rows.map(r => r[k]);
+  const trackerJson = tracker && typeof tracker === 'object' ? JSON.stringify(tracker) : null;
   const q = db();
   const results = await q.transaction([
     q`DELETE FROM deck_keys WHERE NOT (id = ANY(${col('id')}::text[]))`,
@@ -115,8 +122,10 @@ export async function writeBoard(pads, master) {
         IS DISTINCT FROM (EXCLUDED.position, EXCLUDED.name, EXCLUDED.faction, EXCLUDED.kind, EXCLUDED.preset, EXCLUDED.line,
              EXCLUDED.hotkey, EXCLUDED.volume, EXCLUDED.pitch, EXCLUDED.color, EXCLUDED.favorite, EXCLUDED.file_id,
              EXCLUDED.file_name, EXCLUDED.clip_path, EXCLUDED.prev_kind, EXCLUDED.clips, EXCLUDED.play_mode)`,
-    q`INSERT INTO deck_settings (id, master, saved_at) VALUES (1, ${num(master, 0, 1, 0.8)}, now())
-      ON CONFLICT (id) DO UPDATE SET master = EXCLUDED.master, saved_at = EXCLUDED.saved_at
+    // A save without tracker data (older page) keeps the stored tracker.
+    q`INSERT INTO deck_settings (id, master, saved_at, tracker) VALUES (1, ${num(master, 0, 1, 0.8)}, now(), ${trackerJson}::jsonb)
+      ON CONFLICT (id) DO UPDATE SET master = EXCLUDED.master, saved_at = EXCLUDED.saved_at,
+        tracker = COALESCE(EXCLUDED.tracker, deck_settings.tracker)
       RETURNING saved_at`,
   ]);
   return { savedAt: new Date(results[2][0].saved_at).toISOString(), keys: rows.length };

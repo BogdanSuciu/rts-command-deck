@@ -226,6 +226,68 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
   .pad .nm{font-size:14px}
   .pad .nm.long{font-size:12px}
 }
+/* ---------- view tabs ---------- */
+.tabs{display:flex; gap:10px; flex-wrap:wrap}
+.tabs .key{font-size:13px; padding:11px 16px 10px}
+
+/* ---------- mission tracker ---------- */
+.mission{display:flex; flex-direction:column; gap:16px}
+.m-top{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px 20px; align-items:center}
+.m-name{font:700 22px/1.1 var(--f-display); letter-spacing:.05em; text-transform:uppercase; margin:0; overflow-wrap:anywhere}
+.m-sub{color:var(--ink-dim); font-size:13px; margin-top:4px}
+.m-round{display:flex; align-items:baseline; gap:10px; padding:10px 16px}
+.m-round .big{font:40px/1 var(--f-mono)}
+.m-round .of{font:16px var(--f-mono); color:var(--lcd-dim)}
+.m-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.m-phases{display:flex; gap:6px; flex-wrap:wrap; grid-column:1 / -1}
+.m-phase{font:600 11px/1 var(--f-display); letter-spacing:.1em; text-transform:uppercase; padding:8px 10px; border-radius:6px;
+  background:var(--well); color:var(--ink-faint); border:1px solid #2a323a}
+.m-phase.done{color:var(--ink-dim)}
+.m-phase.now{color:#08130c; background:var(--lcd); border-color:var(--lcd); box-shadow:0 0 12px rgba(120,255,170,.35)}
+.m-actions{grid-column:1 / -1}
+.banner{grid-column:1 / -1; font:700 16px/1.3 var(--f-display); letter-spacing:.06em; text-transform:uppercase; padding:12px 16px;
+  border-radius:8px; background:repeating-linear-gradient(-45deg,rgba(232,178,44,.16) 0 12px,transparent 12px 24px); border:1px solid var(--hazard); color:var(--hazard)}
+.m-players{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.player{--pc:var(--terran); display:flex; flex-direction:column; gap:12px}
+.player .p-head{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.player .p-led{width:12px; height:12px; border-radius:50%; background:var(--pc); box-shadow:0 0 8px var(--pc); flex:none}
+.player input.p-name{flex:1 1 140px; min-width:0; font:700 17px var(--f-display); letter-spacing:.04em; text-transform:uppercase; color:var(--ink);
+  background:transparent; border:0; border-bottom:1px dashed #3a444e; padding:4px 0}
+.player select{font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:6px 8px}
+.p-vp{display:flex; align-items:center; gap:12px}
+.p-vp .digits{font:46px/1 var(--f-mono); color:var(--pc); text-shadow:0 0 10px color-mix(in srgb, var(--pc) 45%, transparent); min-width:2.2ch; text-align:center;
+  background:var(--lcd-bg); border-radius:8px; padding:6px 12px; box-shadow:inset 0 2px 8px rgba(0,0,0,.8)}
+.p-vp .lbl{width:28px}
+.res{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; align-items:center}
+.res .r-name{font-size:13.5px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.res .r-ctl{display:flex; gap:4px; align-items:center}
+.res .r-val{font:18px var(--f-mono); min-width:3ch; text-align:center; color:var(--ink)}
+.init{font-size:12px}
+.player.has-init .init{--lamp:var(--hazard)}
+.obj-table{display:flex; flex-direction:column; gap:8px}
+.obj{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 14px; align-items:center; background:var(--well); border:1px solid #2a323a; border-radius:8px; padding:8px 10px}
+.obj .o-name{font-weight:600; overflow-wrap:anywhere}
+.obj .o-vp{font:12px var(--f-mono); color:var(--ink-dim); margin-left:8px}
+.obj .seg .key{font-size:11px; padding:7px 9px 6px}
+.m-cols{display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:16px; align-items:start}
+.m-cols > .plate{min-width:0}
+.plate h3{margin:0 0 12px; font:700 14px var(--f-display); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim)}
+.log{list-style:none; margin:0; padding:0; max-height:300px; overflow:auto; display:flex; flex-direction:column; gap:4px}
+.log li{font-size:13px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; padding:5px 2px; border-bottom:1px solid #222a31}
+.log .l-when{font:11px var(--f-mono); color:var(--ink-faint); white-space:nowrap; padding-top:2px}
+.note-in{display:flex; gap:8px; margin-top:10px}
+.note-in input{flex:1; min-width:0; font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:8px 10px}
+.quick{display:flex; gap:8px; flex-wrap:wrap}
+.quick .key .lamp{background:var(--qc); box-shadow:0 0 6px var(--qc)}
+.empty-note{color:var(--ink-dim); font-size:13px}
+.s-obj{display:grid; grid-template-columns:minmax(0,1fr) 72px auto; gap:8px; align-items:center}
+.s-obj input{font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:7px 9px; min-width:0; width:100%}
+.s-list{display:flex; flex-direction:column; gap:6px}
+.field input[type=number]{font:14px var(--f-body); color:var(--ink); background:var(--well); border:1px solid #2a323a; border-radius:7px; padding:8px 10px; width:100%}
+@media (max-width:760px){
+  .m-top,.m-cols,.m-players{grid-template-columns:1fr}
+}
+#view-board{display:flex; flex-direction:column; gap:16px}
 @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
 </head>
@@ -255,6 +317,13 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
     </div>
   </header>
 
+  <nav class="tabs" aria-label="Views">
+    <button class="key" id="tab-board" aria-pressed="true" style="--lamp:var(--lcd)"><span class="lamp"></span>Soundboard</button>
+    <button class="key" id="tab-mission" aria-pressed="false" style="--lamp:var(--lcd)"><span class="lamp"></span>Mission tracker</button>
+  </nav>
+
+  <div id="view-board">
+
   <section class="plate filters" aria-label="Filters">
     <div class="frow">
       <span class="lbl">Search</span>
@@ -266,6 +335,47 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
   </section>
 
   <main class="grid" id="grid" aria-label="Sound keys"></main>
+  </div>
+
+  <section class="mission" id="view-mission" aria-label="Mission tracker" hidden>
+    <div class="plate m-top">
+      <div>
+        <h2 class="m-name" id="m-name">Custom mission</h2>
+        <div class="m-sub" id="m-sub"></div>
+      </div>
+      <div class="lcd m-round" aria-live="polite"><span class="lbl" style="color:var(--lcd-dim)">Round</span><span class="big" id="m-round">1</span><span class="of" id="m-rounds">/ 5</span></div>
+      <div class="m-phases" id="m-phases"></div>
+      <div class="banner" id="m-banner" hidden></div>
+      <div class="m-row m-actions">
+        <button class="key primary" id="m-next">Next phase ▶</button>
+        <button class="key" id="m-endround">End round &amp; score</button>
+        <button class="key" id="m-prevround" title="Go back a round (no scoring is undone)">◀ Round</button>
+        <span style="flex:1"></span>
+        <button class="key" id="m-setup-btn">Mission setup</button>
+        <button class="key danger" id="m-newgame">New game</button>
+      </div>
+    </div>
+
+    <div class="m-players" id="m-players"></div>
+
+    <div class="m-cols">
+      <div class="plate">
+        <h3>Objectives</h3>
+        <div class="obj-table" id="m-objs"></div>
+        <p class="m-sub">“End round &amp; score” gives each objective's VP to whoever controls it.</p>
+      </div>
+      <div class="plate">
+        <h3>Battle log</h3>
+        <form class="note-in" id="m-note-form"><input id="m-note" placeholder="Add a note: casualties, abilities used, reminders…" autocomplete="off" aria-label="Add a note to the log"><button class="key" type="submit">Log</button></form>
+        <ul class="log" id="m-log" style="margin-top:10px"></ul>
+      </div>
+    </div>
+
+    <div class="plate">
+      <h3>Quick sounds</h3>
+      <div class="quick" id="m-quick"></div>
+    </div>
+  </section>
 
   <footer>Fan-made board. Until you upload the original clips, unit lines are read by your device's speech engine and Zerg sounds are synthesized; nothing is taken from the games. Upload a clip under any key, drop a file on it, or use Load clips to add many at once: a file named after a unit or its line (for example marine.mp3 or nuclear_launch_detected.wav) lands on that key. Clips are saved in this browser, and in your private cloud storage when Cloud is connected.</footer>
 </div>
@@ -311,6 +421,37 @@ dialog h2{margin:0 0 14px; font:700 20px var(--f-display); letter-spacing:.06em;
       <span class="spacer"></span>
       <button type="button" class="key" id="ed-cancel">Cancel</button>
       <button type="submit" class="key primary" id="ed-save">Save key</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="m-setup" aria-labelledby="ms-title">
+  <form id="ms-form">
+    <h2 id="ms-title">Mission setup</h2>
+    <div class="form">
+      <label class="field full" for="ms-template"><span class="lbl">Start from a saved mission</span><select id="ms-template"></select></label>
+      <label class="field full" for="ms-name"><span class="lbl">Mission name</span><input type="text" id="ms-name" maxlength="60" required></label>
+      <label class="field" for="ms-rounds"><span class="lbl">Rounds</span><input type="number" id="ms-rounds" min="1" max="20" step="1"></label>
+      <label class="field" for="ms-target"><span class="lbl">VP to win (0 = play all rounds)</span><input type="number" id="ms-target" min="0" max="999" step="1"></label>
+      <label class="field full" for="ms-phases"><span class="lbl">Phases, one per line</span><textarea id="ms-phases" rows="4"></textarea></label>
+      <label class="field full" for="ms-res"><span class="lbl">Resources tracked per player, one per line</span><textarea id="ms-res" rows="3"></textarea></label>
+      <div class="field full"><span class="lbl">Objectives (name · VP each round they're held)</span>
+        <div class="s-list" id="ms-objs"></div>
+        <div><button type="button" class="key" id="ms-add-obj" style="margin-top:6px">+ Add objective</button></div>
+      </div>
+      <div class="field full"><span class="lbl">Sound cues (keys from your board)</span></div>
+      <label class="field" for="ms-cue-round"><span class="lbl">New round</span><select id="ms-cue-round" data-cue="round"></select></label>
+      <label class="field" for="ms-cue-phase"><span class="lbl">Next phase</span><select id="ms-cue-phase" data-cue="phase"></select></label>
+      <label class="field" for="ms-cue-capture"><span class="lbl">Objective taken</span><select id="ms-cue-capture" data-cue="capture"></select></label>
+      <label class="field" for="ms-cue-end"><span class="lbl">Mission complete</span><select id="ms-cue-end" data-cue="end"></select></label>
+      <p class="note full" id="ms-msg" hidden></p>
+    </div>
+    <div class="row">
+      <button type="button" class="key" id="ms-save-tpl">Save as mission</button>
+      <button type="button" class="key danger" id="ms-del-tpl">Delete saved mission</button>
+      <span class="spacer"></span>
+      <button type="button" class="key" id="ms-cancel">Cancel</button>
+      <button type="submit" class="key primary">Apply</button>
     </div>
   </form>
 </dialog>
@@ -1227,7 +1368,7 @@ let pushTimer = null;
 function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(() => pushLayout().catch(e => setCloudMsg('Saving to the cloud failed: ' + e.message, true)), 700); }
 async function pushLayout(){
   clearTimeout(pushTimer);
-  const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master }) });
+  const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master, tracker }) });
   cloud.savedAt = r.savedAt; cloud.dirty = false; persistCloud(); updateCloudUI();
 }
 function applyRemote(r){
@@ -1236,6 +1377,10 @@ function applyRemote(r){
   state.pads = migratePads(pads);
   if (typeof r.layout.master === 'number') state.master = r.layout.master;
   cloud.savedAt = r.savedAt; cloud.dirty = false;
+  if (r.layout.tracker && applyTrackerData(r.layout.tracker)) {
+    try { localStorage.setItem(TRACK_KEY, JSON.stringify(tracker)); } catch (e) {}
+    if (!missionView.hidden) renderMission();
+  }
   localSave(); persistCloud(); syncMaster(); render();
   if (state.pads !== pads) saveState(); // a board from before the unit-lines set: save the migrated version back
   return true;
@@ -1295,6 +1440,333 @@ $('#cloud-off').addEventListener('click', () => {
   setCloudMsg('Disconnected. This browser keeps its current board and clips; nothing was deleted from the cloud.');
 });
 
+/* ================= mission tracker ================= */
+// Tracks one game at a time: rounds and phases, two players' VP and resources, objective control
+// and a battle log. Missions are fully editable and can be saved as reusable templates.
+// Stored in localStorage and, when Cloud is connected, alongside the board.
+const TRACK_KEY = 'rtsdeck.tracker';
+const MAX_LOG = 200;
+const DEFAULT_MISSION = {
+  mission: 'Custom mission', rounds: 5, vpToWin: 0,
+  phases: ['Command', 'Movement', 'Combat', 'Scoring'],
+  resources: ['Minerals', 'Vespene gas'],
+  objectives: [{ id: 'o1', name: 'Objective A', vp: 1 }, { id: 'o2', name: 'Objective B', vp: 1 }, { id: 'o3', name: 'Center', vp: 2 }],
+  cues: { round: '', phase: '', capture: '', end: '' },
+};
+const tracker = { config: null, game: null, templates: [] };
+const clean = (v, max) => String(v ?? '').trim().slice(0, max);
+const clampInt = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+const uniqList = (arr, max, len) => [...new Set((Array.isArray(arr) ? arr : []).map(x => clean(x, len)).filter(Boolean))].slice(0, max);
+
+function normConfig(c){
+  c = c && typeof c === 'object' ? c : {};
+  const objectives = (Array.isArray(c.objectives) ? c.objectives : []).filter(o => o && clean(o.name, 40)).slice(0, 12)
+    .map(o => ({ id: clean(o.id, 24) || uid(), name: clean(o.name, 40), vp: clampInt(o.vp, 0, 99, 1) }));
+  const cues = {};
+  for (const k of ['round', 'phase', 'capture', 'end']) cues[k] = clean(c.cues && c.cues[k], 64);
+  const phases = uniqList(c.phases, 10, 24), resources = uniqList(c.resources, 6, 24);
+  return {
+    mission: clean(c.mission, 60) || DEFAULT_MISSION.mission,
+    rounds: clampInt(c.rounds, 1, 20, DEFAULT_MISSION.rounds),
+    vpToWin: clampInt(c.vpToWin, 0, 999, 0),
+    phases: phases.length ? phases : ['Round'], resources, objectives, cues,
+  };
+}
+function freshGame(cfg, prev){
+  return {
+    round: 1, phase: 0, over: false, initiative: 0, control: {}, log: [],
+    players: [0, 1].map(i => ({
+      name: (prev && prev.players[i] && prev.players[i].name) || `Player ${i + 1}`,
+      faction: (prev && prev.players[i] && prev.players[i].faction) || (i ? 'zerg' : 'terran'),
+      vp: 0, res: Object.fromEntries(cfg.resources.map(r => [r, 0])),
+    })),
+  };
+}
+function normGame(g, cfg){
+  if (!g || typeof g !== 'object' || !Array.isArray(g.players) || g.players.length !== 2) return freshGame(cfg);
+  const control = {};
+  for (const o of cfg.objectives) { const v = g.control && g.control[o.id]; if (v === 0 || v === 1) control[o.id] = v; }
+  return {
+    round: clampInt(g.round, 1, cfg.rounds, 1), phase: clampInt(g.phase, 0, cfg.phases.length - 1, 0), over: !!g.over,
+    initiative: g.initiative === 1 ? 1 : 0, control,
+    log: (Array.isArray(g.log) ? g.log : []).slice(0, MAX_LOG).map(e => ({ t: Number(e.t) || Date.now(), r: clampInt(e.r, 0, 99, 0), text: clean(e.text, 200) })),
+    players: g.players.map((p, i) => ({
+      name: clean(p && p.name, 24) || `Player ${i + 1}`,
+      faction: FACTIONS[p && p.faction] ? p.faction : (i ? 'zerg' : 'terran'),
+      vp: clampInt(p && p.vp, -99, 999, 0),
+      res: Object.fromEntries(cfg.resources.map(r => [r, clampInt(p && p.res && p.res[r], -999, 9999, 0)])),
+    })),
+  };
+}
+function applyTrackerData(t){
+  if (!t || typeof t !== 'object') return false;
+  tracker.config = normConfig(t.config || DEFAULT_MISSION);
+  tracker.game = normGame(t.game, tracker.config);
+  tracker.templates = (Array.isArray(t.templates) ? t.templates : []).slice(0, 30).map(normConfig);
+  return true;
+}
+function loadTracker(){
+  try { applyTrackerData(JSON.parse(localStorage.getItem(TRACK_KEY) || 'null')); } catch (e) {}
+  if (!tracker.config) { tracker.config = normConfig(DEFAULT_MISSION); tracker.game = freshGame(tracker.config); }
+}
+let trackerSaveTimer = null;
+function saveTracker(){
+  try { localStorage.setItem(TRACK_KEY, JSON.stringify(tracker)); } catch (e) {}
+  clearTimeout(trackerSaveTimer);
+  trackerSaveTimer = setTimeout(() => { if (cloud.pass) { cloud.dirty = true; persistCloud(); if (cloud.on) schedulePush(); } }, 400);
+}
+
+const G = () => tracker.game, C = () => tracker.config;
+const phaseName = () => C().phases[G().phase] || '';
+function addLog(text){
+  G().log.unshift({ t: Date.now(), r: G().round, text: clean(text, 200) });
+  if (G().log.length > MAX_LOG) G().log.length = MAX_LOG;
+}
+function playCue(kind){
+  const pad = state.pads.find(p => p.id === C().cues[kind]);
+  if (pad) trigger(pad);
+}
+const pname = i => G().players[i].name;
+// Mission ends when the last round is scored or someone reaches the VP target.
+function checkEnd(){
+  const g = G(), c = C();
+  const [a, b] = g.players.map(p => p.vp);
+  const reached = c.vpToWin > 0 && (a >= c.vpToWin || b >= c.vpToWin);
+  if (!reached) return false;
+  g.over = true;
+  addLog(`Mission complete: ${resultText()}.`);
+  playCue('end');
+  return true;
+}
+function resultText(){
+  const [p, q] = G().players;
+  if (p.vp === q.vp) return `draw, ${p.vp}–${q.vp}`;
+  const w = p.vp > q.vp ? p : q, l = w === p ? q : p;
+  return `${w.name} wins ${w.vp}–${l.vp}`;
+}
+
+function renderMission(){
+  const g = G(), c = C();
+  $('#m-name').textContent = c.mission;
+  $('#m-sub').textContent = `${c.rounds} rounds${c.vpToWin ? ` · first to ${c.vpToWin} VP wins` : ''} · ${c.objectives.length} objective${c.objectives.length === 1 ? '' : 's'}`;
+  $('#m-round').textContent = g.round;
+  $('#m-rounds').textContent = `/ ${c.rounds}`;
+  $('#m-phases').innerHTML = c.phases.map((ph, i) =>
+    `<span class="m-phase${i < g.phase ? ' done' : ''}${i === g.phase && !g.over ? ' now' : ''}">${esc(ph)}</span>`).join('');
+  const lastPhase = g.phase >= c.phases.length - 1;
+  $('#m-next').disabled = g.over || lastPhase;
+  $('#m-next').textContent = lastPhase ? 'Last phase' : `Next: ${c.phases[g.phase + 1]} ▶`;
+  $('#m-endround').disabled = g.over;
+  $('#m-endround').textContent = g.round >= c.rounds ? 'End final round & score' : 'End round & score';
+  $('#m-prevround').disabled = g.round <= 1 && !g.over;
+  const banner = $('#m-banner');
+  banner.hidden = !g.over;
+  if (g.over) banner.textContent = `Mission complete · ${resultText()}`;
+
+  $('#m-players').innerHTML = g.players.map((p, i) => `
+    <div class="plate player${g.initiative === i ? ' has-init' : ''}" style="--pc:${FACTIONS[p.faction].hex}" data-player="${i}">
+      <div class="p-head">
+        <span class="p-led"></span>
+        <input class="p-name" id="m-pname-${i}" value="${esc(p.name)}" maxlength="24" aria-label="Player ${i + 1} name">
+        <select id="m-pfaction-${i}" aria-label="${esc(p.name)} faction">${Object.entries(FACTIONS).map(([k, f]) => `<option value="${k}"${k === p.faction ? ' selected' : ''}>${f.label}</option>`).join('')}</select>
+        <button class="key init" type="button" data-init="${i}" aria-pressed="${g.initiative === i}"><span class="lamp"></span>Initiative</button>
+      </div>
+      <div class="p-vp">
+        <span class="lbl">VP</span>
+        <button class="mini" type="button" data-vp="${i}" data-d="-1" aria-label="${esc(p.name)} minus 1 VP">−1</button>
+        <span class="digits" aria-live="polite" aria-label="${esc(p.name)} victory points">${p.vp}</span>
+        <button class="mini" type="button" data-vp="${i}" data-d="1" aria-label="${esc(p.name)} plus 1 VP">+1</button>
+      </div>
+      ${c.resources.length ? `<div class="res">${c.resources.map(r => `
+        <span class="r-name">${esc(r)}</span>
+        <span class="r-ctl">
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="-5">−5</button>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="-1">−1</button>
+          <span class="r-val">${p.res[r] ?? 0}</span>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="1">+1</button>
+          <button class="mini" type="button" data-res="${i}" data-r="${esc(r)}" data-d="5">+5</button>
+        </span>`).join('')}</div>` : ''}
+    </div>`).join('');
+
+  $('#m-objs').innerHTML = c.objectives.length ? c.objectives.map(o => {
+    const who = g.control[o.id];
+    const btn = (v, label, color) => `<button class="key" type="button" data-obj="${esc(o.id)}" data-who="${v}" aria-pressed="${who === v || (v === -1 && who === undefined)}" style="--lamp:${color}"><span class="lamp"></span>${esc(label)}</button>`;
+    return `<div class="obj"><span><span class="o-name">${esc(o.name)}</span><span class="o-vp">${o.vp} VP/round</span></span>
+      <span class="seg">${btn(-1, 'None', 'var(--ink-dim)')}${btn(0, pname(0), FACTIONS[g.players[0].faction].hex)}${btn(1, pname(1), FACTIONS[g.players[1].faction].hex)}</span></div>`;
+  }).join('') : '<p class="empty-note">No objectives. Add them in Mission setup.</p>';
+
+  $('#m-log').innerHTML = g.log.length ? g.log.map(e =>
+    `<li><span class="l-when">R${e.r} · ${new Date(e.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><span>${esc(e.text)}</span></li>`).join('')
+    : '<li class="empty-note" style="display:block">Scoring, captures and your notes appear here.</li>';
+  renderQuick();
+}
+function renderQuick(){
+  const favs = state.pads.filter(p => p.fav);
+  $('#m-quick').innerHTML = favs.length
+    ? favs.map(p => `<button class="key" type="button" data-quick="${esc(p.id)}" style="--qc:${padColor(p)}"><span class="lamp"></span>${esc(p.name)}${p.key ? ` <span class="n">${esc(keyLabel(p.key))}</span>` : ''}</button>`).join('')
+    : '<p class="empty-note">Star keys on the Soundboard (★) to pin them here. Hotkeys work on this screen too.</p>';
+}
+
+/* tracker interactions */
+const missionView = $('#view-mission');
+missionView.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const g = G(), c = C(), d = b.dataset;
+  if (d.vp != null) {
+    const p = g.players[+d.vp]; p.vp += +d.d;
+    addLog(`${p.name} ${+d.d > 0 ? '+' : ''}${d.d} VP (now ${p.vp}).`);
+    if (!g.over) checkEnd();
+  } else if (d.res != null) {
+    const p = g.players[+d.res]; p.res[d.r] = (p.res[d.r] || 0) + +d.d;
+  } else if (d.init != null) {
+    g.initiative = +d.init; addLog(`${pname(g.initiative)} has the initiative.`);
+  } else if (d.obj != null) {
+    const who = +d.who, prev = g.control[d.obj], o = c.objectives.find(x => x.id === d.obj);
+    if (who === (prev ?? -1)) return;
+    if (who < 0) { delete g.control[d.obj]; addLog(`${o.name} is no longer held.`); }
+    else { g.control[d.obj] = who; addLog(`${pname(who)} ${prev === undefined ? 'took' : 'captured'} ${o.name}.`); playCue('capture'); }
+  } else if (d.quick != null) {
+    const pad = state.pads.find(p => p.id === d.quick); if (pad) trigger(pad); return;
+  } else return;
+  saveTracker(); renderMission();
+});
+missionView.addEventListener('change', e => {
+  const t = e.target, g = G();
+  const m = t.id.match(/^m-p(name|faction)-(\d)$/); if (!m) return;
+  const p = g.players[+m[2]];
+  if (m[1] === 'name') p.name = clean(t.value, 24) || `Player ${+m[2] + 1}`;
+  else p.faction = FACTIONS[t.value] ? t.value : p.faction;
+  saveTracker(); renderMission();
+});
+$('#m-next').addEventListener('click', () => {
+  const g = G(), c = C();
+  if (g.over || g.phase >= c.phases.length - 1) return;
+  g.phase++; addLog(`${c.phases[g.phase]} phase.`); playCue('phase');
+  saveTracker(); renderMission();
+});
+$('#m-endround').addEventListener('click', () => {
+  const g = G(), c = C();
+  if (g.over) return;
+  const gains = [0, 0];
+  for (const o of c.objectives) { const who = g.control[o.id]; if (who === 0 || who === 1) gains[who] += o.vp; }
+  gains.forEach((v, i) => { g.players[i].vp += v; });
+  addLog(`Round ${g.round} scored: ${pname(0)} +${gains[0]}, ${pname(1)} +${gains[1]} (${g.players[0].vp}–${g.players[1].vp}).`);
+  if (!checkEnd()) {
+    if (g.round >= c.rounds) { g.over = true; addLog(`Mission complete: ${resultText()}.`); playCue('end'); }
+    else { g.round++; g.phase = 0; addLog(`Round ${g.round} begins. ${c.phases[0]} phase.`); playCue('round'); }
+  }
+  saveTracker(); renderMission();
+});
+$('#m-prevround').addEventListener('click', () => {
+  const g = G();
+  if (g.over) { g.over = false; addLog('Mission reopened.'); }
+  else if (g.round > 1) { g.round--; g.phase = 0; addLog(`Back to round ${g.round}. Scores are unchanged; adjust VP by hand if needed.`); }
+  saveTracker(); renderMission();
+});
+let newGameArmed = false;
+$('#m-newgame').addEventListener('click', () => {
+  if (!newGameArmed) {
+    newGameArmed = true; $('#m-newgame').textContent = 'Confirm new game';
+    setTimeout(() => { newGameArmed = false; $('#m-newgame').textContent = 'New game'; }, 4000);
+    return;
+  }
+  newGameArmed = false; $('#m-newgame').textContent = 'New game';
+  tracker.game = freshGame(C(), G());
+  addLog(`New game: ${C().mission}. Round 1, ${C().phases[0]} phase.`);
+  playCue('round'); saveTracker(); renderMission();
+});
+$('#m-note-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = clean($('#m-note').value, 200); if (!v) return;
+  addLog(v); $('#m-note').value = '';
+  saveTracker(); renderMission();
+});
+
+/* mission setup dialog */
+const msDlg = $('#m-setup');
+let msObjs = [];
+function msMsg(t){ const m = $('#ms-msg'); m.textContent = t || ''; m.hidden = !t; }
+function fillSetup(cfg){
+  $('#ms-name').value = cfg.mission;
+  $('#ms-rounds').value = cfg.rounds;
+  $('#ms-target').value = cfg.vpToWin;
+  $('#ms-phases').value = cfg.phases.join('\n');
+  $('#ms-res').value = cfg.resources.join('\n');
+  msObjs = cfg.objectives.map(o => ({ ...o }));
+  renderSetupObjs();
+  const opts = '<option value="">No sound</option>' + state.pads.map(p => `<option value="${esc(p.id)}">${esc(p.name)} (${FACTIONS[p.faction].label})</option>`).join('');
+  document.querySelectorAll('#ms-form select[data-cue]').forEach(s => { s.innerHTML = opts; s.value = state.pads.some(p => p.id === cfg.cues[s.dataset.cue]) ? cfg.cues[s.dataset.cue] : ''; });
+}
+function renderSetupObjs(){
+  $('#ms-objs').innerHTML = msObjs.map((o, i) => `
+    <div class="s-obj">
+      <input type="text" data-oname="${i}" value="${esc(o.name)}" maxlength="40" aria-label="Objective ${i + 1} name">
+      <input type="number" data-ovp="${i}" value="${o.vp}" min="0" max="99" aria-label="Objective ${i + 1} VP per round">
+      <button type="button" class="mini danger" data-odel="${i}" aria-label="Remove objective ${i + 1}">✕</button>
+    </div>`).join('') || '<p class="empty-note">No objectives.</p>';
+  $('#ms-add-obj').disabled = msObjs.length >= 12;
+}
+function renderTemplateSelect(){
+  $('#ms-template').innerHTML = '<option value="">Current mission</option><option value="__default">Generic starter mission</option>' +
+    tracker.templates.map((t, i) => `<option value="${i}">${esc(t.mission)}</option>`).join('');
+}
+function readSetup(){
+  return normConfig({
+    mission: $('#ms-name').value, rounds: $('#ms-rounds').value, vpToWin: $('#ms-target').value,
+    phases: $('#ms-phases').value.split('\n'), resources: $('#ms-res').value.split('\n'),
+    objectives: msObjs, cues: Object.fromEntries([...document.querySelectorAll('#ms-form select[data-cue]')].map(s => [s.dataset.cue, s.value])),
+  });
+}
+$('#m-setup-btn').addEventListener('click', () => { renderTemplateSelect(); fillSetup(C()); msMsg(''); msDlg.showModal(); });
+$('#ms-cancel').addEventListener('click', () => msDlg.close());
+$('#ms-template').addEventListener('change', e => {
+  const v = e.target.value;
+  fillSetup(v === '' ? C() : v === '__default' ? normConfig(DEFAULT_MISSION) : tracker.templates[+v]);
+  msMsg(v === '' ? '' : 'Loaded. Apply to use it; scores carry over unless you start a new game.');
+});
+$('#ms-objs').addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.oname != null) msObjs[+t.dataset.oname].name = t.value;
+  if (t.dataset.ovp != null) msObjs[+t.dataset.ovp].vp = t.value;
+});
+$('#ms-objs').addEventListener('click', e => { const b = e.target.closest('[data-odel]'); if (b) { msObjs.splice(+b.dataset.odel, 1); renderSetupObjs(); } });
+$('#ms-add-obj').addEventListener('click', () => { msObjs.push({ id: uid(), name: `Objective ${msObjs.length + 1}`, vp: 1 }); renderSetupObjs(); $(`[data-oname="${msObjs.length - 1}"]`)?.select(); });
+$('#ms-save-tpl').addEventListener('click', () => {
+  const cfg = readSetup();
+  const i = tracker.templates.findIndex(t => t.mission.toLowerCase() === cfg.mission.toLowerCase());
+  if (i >= 0) tracker.templates[i] = cfg; else tracker.templates.push(cfg);
+  saveTracker(); renderTemplateSelect();
+  msMsg(`Saved “${cfg.mission}” to your missions${i >= 0 ? ' (replaced the earlier version)' : ''}.`);
+});
+$('#ms-del-tpl').addEventListener('click', () => {
+  const name = $('#ms-name').value.trim().toLowerCase();
+  const i = tracker.templates.findIndex(t => t.mission.toLowerCase() === name);
+  if (i < 0) { msMsg('No saved mission has this name.'); return; }
+  const [gone] = tracker.templates.splice(i, 1);
+  saveTracker(); renderTemplateSelect(); msMsg(`Deleted saved mission “${gone.mission}”.`);
+});
+$('#ms-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const cfg = readSetup(), g = G();
+  tracker.config = cfg;
+  tracker.game = normGame(g, cfg); // keeps scores; drops resources and objectives that no longer exist
+  addLog(`Mission set: ${cfg.mission}.`);
+  saveTracker(); renderMission(); msDlg.close();
+});
+
+/* view switching (Soundboard / Mission tracker), remembered per browser and via #mission */
+function showView(name){
+  const mission = name === 'mission';
+  $('#view-board').hidden = mission;
+  missionView.hidden = !mission;
+  $('#tab-board').setAttribute('aria-pressed', !mission);
+  $('#tab-mission').setAttribute('aria-pressed', mission);
+  if (mission) renderMission();
+  try { localStorage.setItem('rtsdeck.view', name); } catch (e) {}
+}
+$('#tab-board').addEventListener('click', () => showView('board'));
+$('#tab-mission').addEventListener('click', () => showView('mission'));
+
 /* ================= layout dialog ================= */
 const lay = $('#layout');
 function layMsg(t){ const m = $('#lay-msg'); m.textContent = t; m.hidden = !t; }
@@ -1325,6 +1797,7 @@ $('#lay-reset').addEventListener('click', () => {
 
 /* ================= boot ================= */
 loadState();
+loadTracker();
 loadCloud();
 fillSelects();
 syncMaster();
@@ -1334,6 +1807,9 @@ if (migrated) {
   toast('Updated your board to the current key set. Keys with your uploaded clips were kept.');
 }
 updateCloudUI();
+let startView = 'board';
+try { startView = localStorage.getItem('rtsdeck.view') || 'board'; } catch (e) {}
+showView(location.hash === '#mission' ? 'mission' : location.hash === '#board' ? 'board' : startView);
 if (cloud.pass) connect(true);
 })();
 </script>

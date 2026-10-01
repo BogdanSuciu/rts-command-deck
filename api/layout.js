@@ -1,6 +1,6 @@
 // /api/layout — the board, stored as one row per key in Postgres (see api/_db.js, db/schema.sql)
-//   GET  → { layout: { pads, master } | null, savedAt }
-//   PUT  body { pads, master } → { savedAt, keys }
+//   GET  → { layout: { pads, master, tracker } | null, savedAt }
+//   PUT  body { pads, master, tracker? } → { savedAt, keys }   (tracker = mission tracker state)
 // The page always sends the whole board; the server upserts changed keys and deletes removed ones in one
 // transaction. The last save wins.
 import { get } from '@vercel/blob';
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const board = (await readBoard()) || (await importLegacyBoard());
       if (!board) return send(res, 200, { layout: null, savedAt: null });
-      return send(res, 200, { layout: { pads: board.pads, master: board.master }, savedAt: board.savedAt });
+      return send(res, 200, { layout: { pads: board.pads, master: board.master, tracker: board.tracker }, savedAt: board.savedAt });
     }
 
     if (req.method === 'PUT') {
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       }
       if (!doc || !Array.isArray(doc.pads)) return send(res, 400, { error: 'The board needs a pads list.' });
       if (doc.pads.length > 500) return send(res, 400, { error: 'A board can have at most 500 keys.' });
-      const { savedAt, keys } = await writeBoard(doc.pads, doc.master);
+      const { savedAt, keys } = await writeBoard(doc.pads, doc.master, doc.tracker);
       return send(res, 200, { savedAt, keys });
     }
 
