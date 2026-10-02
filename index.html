@@ -337,7 +337,7 @@ em.off{font-style:normal; font-size:11px; color:var(--ink-faint)}
     </div>
   </header>
 
-  <nav class="tabs" aria-label="Views">
+  <nav class="tabs" id="view-tabs" aria-label="Views" hidden>
     <button class="key" id="tab-board" aria-pressed="true" style="--lamp:var(--lcd)"><span class="lamp"></span>Soundboard</button>
     <button class="key" id="tab-mission" aria-pressed="false" style="--lamp:var(--lcd)"><span class="lamp"></span>Mission tracker</button>
   </nav>
@@ -1475,6 +1475,9 @@ $('#cloud-off').addEventListener('click', () => {
 });
 
 /* ================= mission tracker ================= */
+// Paused: the tab is hidden and the Soundboard is always shown. The code and any saved tracker data stay
+// (and keep syncing), so the feature can continue later. Set to true to bring the tab back.
+const TRACKER_ENABLED = false;
 // Follows one game through its rounds and phases. A mission defines the flow: phases (each with an optional
 // step checklist), per-player resources, objectives and initiative. Each of those can be limited to certain
 // phases (hidden otherwise) and given a rule for the start of each round (reset, add, clear, pass on).
@@ -1973,7 +1976,7 @@ function showView(name){
 }
 $('#tab-board').addEventListener('click', () => showView('board'));
 $('#tab-mission').addEventListener('click', () => showView('mission'));
-window.addEventListener('hashchange', () => { if (location.hash === '#mission' || location.hash === '#board') showView(location.hash.slice(1)); });
+window.addEventListener('hashchange', () => { if (TRACKER_ENABLED && (location.hash === '#mission' || location.hash === '#board')) showView(location.hash.slice(1)); });
 
 /* ================= layout dialog ================= */
 const lay = $('#layout');
@@ -2017,7 +2020,8 @@ if (migrated) {
 updateCloudUI();
 let startView = 'board';
 try { startView = localStorage.getItem('rtsdeck.view') || 'board'; } catch (e) {}
-showView(location.hash === '#mission' ? 'mission' : location.hash === '#board' ? 'board' : startView);
+$('#view-tabs').hidden = !TRACKER_ENABLED;
+showView(!TRACKER_ENABLED ? 'board' : location.hash === '#mission' ? 'mission' : location.hash === '#board' ? 'board' : startView);
 if (cloud.pass) connect(true);
 })();
 </script>

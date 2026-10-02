@@ -93,6 +93,8 @@ When you change `index.html` or the icons, bump `VERSION` in `sw.js` so installe
 
 ## Mission tracker
 
+> **Paused.** The Mission tracker tab is hidden for now; the Soundboard is always shown. The code is still in `index.html` and saved tracker data is kept (and still syncs). To bring it back, set `TRACKER_ENABLED = true` in `index.html`.
+
 Switch to **Mission tracker** with the tab under the header (or open the site with `#mission`). It follows one tabletop game at a time, for StarCraft: The Miniatures Game or any similar skirmish game, through its rounds and phases.
 
 ### Game flow
