@@ -308,7 +308,27 @@ em.off{font-style:normal; font-size:11px; color:var(--ink-faint)}
 .field .s-card .s-line select,.field .s-card .s-line input{width:auto}
 .field .s-card .s-line input.num{width:76px}
 .field .s-card .s-line .grow{width:auto; flex:1 1 140px}
-@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+/* discreet server-activity toasts */
+.sync-toasts{position:fixed; right:14px; bottom:calc(14px + env(safe-area-inset-bottom,0px)); z-index:11; display:flex; flex-direction:column-reverse; gap:6px; align-items:flex-end; pointer-events:none}
+.st{display:flex; align-items:center; gap:8px; font:12px/1.2 var(--f-mono); color:var(--lcd); background:rgba(11,23,16,.92); border:1px solid #213a2a;
+  border-radius:999px; padding:7px 12px 7px 10px; box-shadow:0 6px 18px rgba(0,0,0,.5); max-width:min(320px, calc(100vw - 28px));
+  opacity:0; transform:translateY(6px); transition:opacity .2s, transform .2s}
+.st.in{opacity:1; transform:none}
+.st .st-t{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.st .st-i{width:12px; height:12px; flex:none; border-radius:50%}
+.st.busy .st-i{border:2px solid rgba(120,255,170,.25); border-top-color:var(--lcd); animation:spin .8s linear infinite}
+.st.ok .st-i{background:var(--lcd); box-shadow:0 0 6px var(--lcd); -webkit-mask:none}
+.st.ok .st-i::after{content:"✓"; display:block; font:bold 9px/12px var(--f-body); color:#08130c; text-align:center}
+.st.err{color:#ffb4ad; border-color:#5a2420; background:rgba(30,10,9,.94)}
+.st.err .st-i{background:var(--danger); box-shadow:0 0 6px var(--danger)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+#cloud-btn.busy .lamp{animation:pulse 1s ease-in-out infinite}
+.pad.fetching .led{background:var(--led); animation:pulse .7s ease-in-out infinite}
+.key.working{pointer-events:none; opacity:.8}
+.key.working::after{content:""; width:10px; height:10px; border-radius:50%; border:2px solid rgba(0,0,0,.25); border-top-color:currentColor; animation:spin .8s linear infinite}
+@media (max-width:560px){ .sync-toasts{top:calc(10px + env(safe-area-inset-top,0px)); bottom:auto; flex-direction:column} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} .st.busy .st-i,#cloud-btn.busy .lamp,.pad.fetching .led,.key.working::after{animation:none} }
 </style>
 </head>
 <body>
@@ -524,6 +544,7 @@ em.off{font-style:normal; font-size:11px; color:var(--ink-faint)}
 </dialog>
 
 <div class="toast" id="toast" hidden></div>
+<div class="sync-toasts" id="sync-toasts" role="status" aria-live="polite"></div>
 
 <script>
 (() => {
@@ -854,8 +875,12 @@ async function play(pad){
       let blob = clip && (clip.blob || await getClip(clip.fileId));
       if (clip && !blob && clip.path && cloud.on) {
         setLCD('▼ Loading ' + pad.name, 'Fetching clip from cloud storage');
+        const padEl = grid.querySelector(`.pad[data-play="${CSS.escape(pad.id)}"]`);
+        padEl?.classList.add('fetching');
+        const act = activity(`Loading ${clip.name}…`);
         blob = await cloudFetch(clip.path);
-        if (blob) putClip(clip.fileId, blob);
+        padEl?.classList.remove('fetching');
+        if (blob) { putClip(clip.fileId, blob); act.done(`Loaded ${clip.name}`); } else act.fail(`Couldn't load ${clip.name}`);
       }
       if (!blob) {
         toast(clip ? `“${clip.name}” on “${pad.name}” isn't in this browser. Open ✎ on the key to add it again.` : `“${pad.name}” has no clips yet. Open ✎ on the key to add some.`);
@@ -1318,6 +1343,53 @@ $('#bulk-file').addEventListener('change', async e => {
   uploadMissing();
 });
 
+/* ================= server activity toasts ================= */
+// Small corner toasts for anything that reads from or writes to the server: a spinner while it runs,
+// a brief tick when it's done, a red note when it fails. Calls with the same key share one toast.
+const syncBox = $('#sync-toasts');
+const liveToasts = new Map();
+let busyCount = 0;
+function setBusy(d){ busyCount = Math.max(0, busyCount + d); $('#cloud-btn').classList.toggle('busy', busyCount > 0); }
+// An open dialog sits in the browser's top layer, above everything else, so the toasts move into it while it's open.
+function placeSyncBox(){
+  const host = document.querySelector('dialog[open]') || document.body;
+  if (syncBox.parentElement !== host) host.append(syncBox);
+}
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('close', placeSyncBox));
+function activity(label, key){
+  placeSyncBox();
+  key = key || 'a' + Math.random().toString(36).slice(2);
+  let t = liveToasts.get(key);
+  if (!t) {
+    const el = document.createElement('div');
+    el.className = 'st';
+    el.innerHTML = '<span class="st-i" aria-hidden="true"></span><span class="st-t"></span>';
+    syncBox.append(el);
+    while (syncBox.children.length > 4) syncBox.firstElementChild.remove();
+    requestAnimationFrame(() => el.classList.add('in'));
+    t = { el, timer: null, busy: false };
+    liveToasts.set(key, t);
+  }
+  const set = (kind, text, ms) => {
+    clearTimeout(t.timer);
+    if (t.busy !== (kind === 'busy')) { setBusy(kind === 'busy' ? 1 : -1); t.busy = kind === 'busy'; }
+    t.el.className = 'st in ' + kind;
+    t.el.querySelector('.st-t').textContent = text;
+    if (ms) t.timer = setTimeout(() => {
+      // Hand the key back first, so a new activity with the same key gets a fresh toast instead of this fading one.
+      if (liveToasts.get(key) === t) liveToasts.delete(key);
+      t.el.classList.remove('in');
+      setTimeout(() => t.el.remove(), 220);
+    }, ms);
+  };
+  set('busy', label);
+  return {
+    update: text => set('busy', text),
+    done: text => set('ok', text || 'Done', 1600),
+    fail: text => set('err', text || 'Failed', 6000),
+  };
+}
+
 /* ================= cloud sync ================= */
 // The board is kept as one database row per key (/api/layout) and every uploaded clip in Vercel Blob (/api/clips).
 // Clips are also cached in IndexedDB, so playback stays instant and works offline.
@@ -1345,7 +1417,9 @@ async function cloudFetch(path){
 }
 function cloudDelete(path){
   if (!cloud.on || !path) return;
-  api('/api/clips?path=' + encodeURIComponent(path), { method: 'DELETE' }).catch(() => {});
+  const act = activity('Removing clip from cloud…');
+  api('/api/clips?path=' + encodeURIComponent(path), { method: 'DELETE' })
+    .then(() => act.done('Clip removed from cloud'), () => act.fail('Clip not removed from cloud'));
 }
 // Drop a key's clip from this browser and from cloud storage, unless another key still uses it.
 function releaseClips(clips, padId){
@@ -1371,15 +1445,18 @@ function queueUpload(fileId, blob, name){
   }
   uploadsPending++; updateCloudUI();
   uploadChain = uploadChain.then(async () => {
+    let act = null;
     try {
       if (!state.pads.some(p => p.clips.some(c => c.fileId === fileId && !c.path))) return; // removed or already synced meanwhile
+      act = activity(`Uploading ${name}…`, 'upload');
       const r = await api('/api/clips', { method: 'POST', headers: { 'content-type': audioType(blob, name), 'x-file-name': encodeURIComponent(name) }, body: blob });
       let used = false;
       state.pads.forEach(p => p.clips.forEach(c => { if (c.fileId === fileId) { c.path = r.path; used = true; } }));
       if (used) saveState(); else cloudDelete(r.path);
+      act.done(uploadsPending > 1 ? `Uploaded ${name} · ${uploadsPending - 1} to go` : `Uploaded ${name}`);
     } catch (e) {
+      if (act) act.fail(`Upload failed · ${name}`);
       setCloudMsg(`Upload of “${name}” failed: ${e.message} It is still saved in this browser and will be retried.`, true);
-      toast(`Cloud upload failed for “${name}”. It still plays from this browser; retrying shortly.`);
       if (isRetryable(e)) scheduleUploadRetry();
     } finally { uploadsPending--; updateCloudUI(); }
   });
@@ -1395,12 +1472,19 @@ async function uploadMissing(){
   }
 }
 async function prefetchClips(){
-  for (const c of state.pads.flatMap(p => p.clips)) {
-    if (!cloud.on) return;
-    if (!c.path || await getClip(c.fileId)) continue;
+  const todo = [];
+  for (const c of state.pads.flatMap(p => p.clips)) if (c.path && !(await getClip(c.fileId))) todo.push(c);
+  if (!todo.length) return;
+  const act = activity(`Downloading clips · 0 of ${todo.length}`, 'prefetch');
+  let got = 0, missed = 0;
+  for (const c of todo) {
+    if (!cloud.on) { act.fail('Clip download paused'); return; }
     const blob = await cloudFetch(c.path);
-    if (blob) await putClip(c.fileId, blob);
+    if (blob) { await putClip(c.fileId, blob); got++; } else missed++;
+    act.update(`Downloading clips · ${got + missed} of ${todo.length}`);
   }
+  if (missed) act.fail(`${missed} clip${missed > 1 ? 's' : ''} couldn't be downloaded`);
+  else act.done(`${got} clip${got > 1 ? 's' : ''} ready offline`);
 }
 
 // Saving to the database: debounced, retried with growing waits when the network or server fails.
@@ -1445,8 +1529,15 @@ window.addEventListener('online', () => {
 });
 async function pushLayout(){
   clearTimeout(pushTimer);
-  const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master, tracker }) });
-  cloud.savedAt = r.savedAt; cloud.dirty = false; persistCloud(); updateCloudUI();
+  const act = activity('Saving changes…', 'save');
+  try {
+    const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master, tracker }) });
+    cloud.savedAt = r.savedAt; cloud.dirty = false; persistCloud(); updateCloudUI();
+    act.done('Saved');
+  } catch (e) {
+    act.fail(isRetryable(e) ? 'Not saved yet · retrying' : 'Not saved · ' + e.message);
+    throw e;
+  }
 }
 function applyRemote(r){
   const pads = (r.layout.pads || []).map(normalizePad).filter(Boolean);
@@ -1467,6 +1558,9 @@ async function connect(quiet, retrying){
   if (!cloud.pass) return;
   clearTimeout(connectRetryTimer);
   setCloudMsg('Connecting…');
+  const btn = $('#cloud-connect');
+  btn.classList.add('working');
+  const act = activity('Syncing with cloud…', 'connect');
   try {
     const r = await api('/api/layout');
     cloud.on = true;
@@ -1475,11 +1569,15 @@ async function connect(quiet, retrying){
     else if (r.savedAt !== cloud.savedAt && applyRemote(r)) note = 'Loaded the board from the cloud.';
     persistCloud(); updateCloudUI();
     setCloudMsg(note);
+    act.done(note.replace(/\.$/, ''));
+    btn.classList.remove('working');
     if (!quiet) toast('Cloud sync is on. ' + note);
     await uploadMissing();
     prefetchClips();
   } catch (e) {
     cloud.on = false; updateCloudUI();
+    btn.classList.remove('working');
+    act.fail(isRetryable(e) ? 'Cloud unreachable · retrying' : 'Cloud sync paused');
     setCloudMsg(e.message, true);
     if (quiet && !retrying) toast('Cloud sync is paused: ' + e.message);
     if (isRetryable(e)) { clearTimeout(connectRetryTimer); connectRetryTimer = setTimeout(() => connect(true, true), 30000); }
@@ -1489,7 +1587,12 @@ let connectRetryTimer = null;
 // Pick up changes made on another device when this tab comes back into view.
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !cloud.on || cloud.dirty || uploadsPending) return;
-  try { const r = await api('/api/layout'); if (r.layout && r.savedAt !== cloud.savedAt && applyRemote(r)) { toast('Loaded changes made on another device.'); prefetchClips(); } } catch (e) {}
+  const act = activity('Checking for changes…', 'check');
+  try {
+    const r = await api('/api/layout');
+    if (r.layout && r.savedAt !== cloud.savedAt && applyRemote(r)) { act.done('Loaded changes from another device'); prefetchClips(); }
+    else act.done('Up to date');
+  } catch (e) { act.fail('Couldn’t check for changes'); }
 });
 
 const cloudDlg = $('#cloud');

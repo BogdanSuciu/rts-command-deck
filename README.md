@@ -145,6 +145,8 @@ Kept on each device only, on purpose:
 
 **Saving is reliable:** changes are saved to the database within a second. If the network or server fails, saves retry on their own with growing waits (the Cloud button shows **Cloud •** until they land). Changes made offline are saved when the connection returns, a change made just before closing the tab is sent on the way out, and an app opened while the server is unreachable connects once it's back. Failed clip uploads are retried too. Clips over 4 MB stay on the device that added them.
 
+**You can see it happen:** every action that reads from or writes to the server shows a small toast in the corner (top of the screen on phones): a spinner while it runs (*Saving changes…*, *Uploading marine.wav…*, *Loading clip…*, *Downloading clips · 3 of 8*, *Syncing with cloud…*), then a brief tick when it's done (*Saved*, *Clip removed from cloud*), or a red note if it failed (*Not saved yet · retrying*). The Cloud button's light pulses while the server is busy, Connect shows a spinner while connecting, and a key's light pulses while its clip is fetched from the cloud.
+
 **The clip catalogue** (`deck_clips`) is updated on every upload and delete, and resynced with Blob storage (files added or removed outside the app are picked up). `GET /api/clips` lists every stored file with whether a key still uses it.
 
 ## About the sounds
