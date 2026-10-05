@@ -6,6 +6,7 @@
 import { get } from '@vercel/blob';
 import { ACCESS, MAX_LAYOUT_BYTES, authorize, hasBlob, send, readBody, streamToText, fail } from './_lib.js';
 import { ensureSchema, readBoard, writeBoard } from './_db.js';
+import { syncCatalogOnce } from './_catalog.js';
 
 // Boards saved before the database existed live in Blob storage as layout.json. Import that once,
 // the first time the database is read while still empty.
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
 
   try {
     await ensureSchema();
+    syncCatalogOnce(); // fills deck_clips from Blob storage in the background, once per instance
 
     if (req.method === 'GET') {
       const board = (await readBoard()) || (await importLegacyBoard());

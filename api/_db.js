@@ -28,6 +28,10 @@ export function ensureSchema() {
       q`ALTER TABLE deck_keys ADD COLUMN IF NOT EXISTS play_mode text NOT NULL DEFAULT 'order'`,
       // Mission tracker state (current game, mission setup, saved missions), stored with the board.
       q`ALTER TABLE deck_settings ADD COLUMN IF NOT EXISTS tracker jsonb`,
+      // Catalogue of uploaded audio files (the files themselves live in Blob storage under clips/).
+      q`CREATE TABLE IF NOT EXISTS deck_clips (
+          path text PRIMARY KEY, name text NOT NULL, content_type text NOT NULL DEFAULT '',
+          size integer NOT NULL DEFAULT 0, uploaded_at timestamptz NOT NULL DEFAULT now())`,
     ]).catch(err => { ready = null; throw err; });
   }
   return ready;
@@ -129,4 +133,41 @@ export async function writeBoard(pads, master, tracker) {
       RETURNING saved_at`,
   ]);
   return { savedAt: new Date(results[2][0].saved_at).toISOString(), keys: rows.length };
+}
+
+/* ---------- uploaded clip catalogue ---------- */
+
+export async function recordClip({ path, name, type, size }) {
+  const q = db();
+  await q`INSERT INTO deck_clips (path, name, content_type, size) VALUES (${path}, ${str(name, 120)}, ${str(type, 64)}, ${size | 0})
+          ON CONFLICT (path) DO NOTHING`;
+}
+
+export async function forgetClip(path) {
+  const q = db();
+  await q`DELETE FROM deck_clips WHERE path = ${path}`;
+}
+
+// Make the catalogue match what is actually in Blob storage: add files it doesn't know, drop rows for files that are gone.
+export async function syncClipRows(blobs) {
+  const q = db();
+  const paths = blobs.map(b => b.pathname);
+  await q.transaction([
+    q`INSERT INTO deck_clips (path, name, content_type, size, uploaded_at)
+      SELECT u.path, regexp_replace(u.path, '^clips/', ''), '', u.size, u.uploaded_at
+      FROM unnest(${paths}::text[], ${blobs.map(b => b.size | 0)}::int[], ${blobs.map(b => new Date(b.uploadedAt).toISOString())}::timestamptz[])
+        AS u(path, size, uploaded_at)
+      ON CONFLICT (path) DO NOTHING`,
+    q`DELETE FROM deck_clips WHERE NOT (path = ANY(${paths}::text[]))`,
+  ]);
+}
+
+// Every stored clip, oldest first, with whether any key still uses it.
+export async function listClipRows() {
+  const q = db();
+  const rows = await q`
+    SELECT c.path, c.name, c.content_type, c.size, c.uploaded_at,
+           EXISTS (SELECT 1 FROM deck_keys k WHERE k.clips @> jsonb_build_array(jsonb_build_object('path', c.path))) AS in_use
+    FROM deck_clips c ORDER BY c.uploaded_at, c.path`;
+  return rows.map(r => ({ path: r.path, name: r.name, type: r.content_type, size: r.size, uploadedAt: new Date(r.uploaded_at).toISOString(), inUse: r.in_use }));
 }

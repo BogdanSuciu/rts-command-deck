@@ -609,7 +609,7 @@ function localSave(){
 }
 function saveState(){
   localSave();
-  if (cloud.pass) { cloud.dirty = true; persistCloud(); if (cloud.on) schedulePush(); }
+  if (cloud.pass) { cloud.dirty = true; persistCloud(); if (cloud.on) schedulePush(); updateCloudUI(); }
 }
 
 /* cloud sync state (keys in Postgres, clips in Vercel Blob, both via /api) */
@@ -1324,13 +1324,17 @@ $('#bulk-file').addEventListener('change', async e => {
 async function api(path, opts = {}){
   let res;
   try { res = await fetch(path, { ...opts, headers: { 'x-deck-pass': cloud.pass, ...(opts.headers || {}) } }); }
-  catch (e) { throw new Error('Could not reach the server. Check your connection.'); }
+  catch (e) { const err = new Error('Could not reach the server. Check your connection.'); err.status = 0; throw err; }
   if (res.status === 204) return null;
   let data = null;
   try { data = await res.json(); } catch (e) {}
-  if (!res.ok) throw new Error((data && data.error) || (res.status === 404
-    ? 'This copy of the board has no storage server. Cloud sync works on the Vercel deployment.'
-    : `Server error ${res.status}.`));
+  if (!res.ok) {
+    const err = new Error((data && data.error) || (res.status === 404
+      ? 'This copy of the board has no storage server. Cloud sync works on the Vercel deployment.'
+      : `Server error ${res.status}.`));
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 async function cloudFetch(path){
@@ -1374,8 +1378,9 @@ function queueUpload(fileId, blob, name){
       state.pads.forEach(p => p.clips.forEach(c => { if (c.fileId === fileId) { c.path = r.path; used = true; } }));
       if (used) saveState(); else cloudDelete(r.path);
     } catch (e) {
-      setCloudMsg(`Upload of “${name}” failed: ${e.message} It is still saved in this browser; use Sync now to retry.`, true);
-      toast(`Cloud upload failed for “${name}”. It still plays from this browser.`);
+      setCloudMsg(`Upload of “${name}” failed: ${e.message} It is still saved in this browser and will be retried.`, true);
+      toast(`Cloud upload failed for “${name}”. It still plays from this browser; retrying shortly.`);
+      if (isRetryable(e)) scheduleUploadRetry();
     } finally { uploadsPending--; updateCloudUI(); }
   });
 }
@@ -1398,8 +1403,46 @@ async function prefetchClips(){
   }
 }
 
-let pushTimer = null;
-function schedulePush(){ clearTimeout(pushTimer); pushTimer = setTimeout(() => pushLayout().catch(e => setCloudMsg('Saving to the cloud failed: ' + e.message, true)), 700); }
+// Saving to the database: debounced, retried with growing waits when the network or server fails.
+// A wrong passcode or a setup problem isn't retried, since repeating can't fix it.
+const isRetryable = e => !e.status || e.status >= 500 || e.status === 429;
+let pushTimer = null, pushFailures = 0;
+function schedulePush(delay = 700){
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    try { await pushLayout(); pushFailures = 0; }
+    catch (e) {
+      if (!cloud.on || !cloud.dirty) return;
+      if (!isRetryable(e)) { setCloudMsg('Saving to the cloud failed: ' + e.message, true); return; }
+      pushFailures = Math.min(pushFailures + 1, 6);
+      const wait = 2000 * 2 ** (pushFailures - 1);
+      setCloudMsg(`Saving to the cloud failed: ${e.message} Retrying in ${Math.round(wait / 1000)} s. Your changes are kept in this browser.`, true);
+      schedulePush(wait);
+    }
+  }, delay);
+}
+let uploadRetryTimer = null;
+function scheduleUploadRetry(){
+  clearTimeout(uploadRetryTimer);
+  uploadRetryTimer = setTimeout(() => { if (cloud.on) uploadMissing(); }, 30000);
+}
+// Send an unsaved change on the way out (tab closed, app switched). keepalive lets it finish after the page goes.
+function flushOnHide(){
+  if (!cloud.on || !cloud.dirty) return;
+  clearTimeout(pushTimer);
+  const body = JSON.stringify({ pads: state.pads, master: state.master, tracker });
+  if (new Blob([body]).size > 60000) return; // over the browser's keepalive limit: saved on the next visit instead
+  try { fetch('/api/layout', { method: 'PUT', keepalive: true, headers: { 'content-type': 'application/json', 'x-deck-pass': cloud.pass }, body }); } catch (e) {}
+}
+window.addEventListener('pagehide', flushOnHide);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushOnHide(); });
+// Back online: reconnect if needed, then save pending changes and upload clips that didn't make it.
+window.addEventListener('online', () => {
+  if (!cloud.pass) return;
+  if (!cloud.on) { connect(true); return; }
+  if (cloud.dirty) schedulePush(0);
+  uploadMissing();
+});
 async function pushLayout(){
   clearTimeout(pushTimer);
   const r = await api('/api/layout', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pads: state.pads, master: state.master, tracker }) });
@@ -1420,8 +1463,9 @@ function applyRemote(r){
   return true;
 }
 // Connect (or re-sync): unsaved local changes win; otherwise the newer cloud board replaces this browser's.
-async function connect(quiet){
+async function connect(quiet, retrying){
   if (!cloud.pass) return;
+  clearTimeout(connectRetryTimer);
   setCloudMsg('Connecting…');
   try {
     const r = await api('/api/layout');
@@ -1437,9 +1481,11 @@ async function connect(quiet){
   } catch (e) {
     cloud.on = false; updateCloudUI();
     setCloudMsg(e.message, true);
-    if (quiet) toast('Cloud sync is paused: ' + e.message);
+    if (quiet && !retrying) toast('Cloud sync is paused: ' + e.message);
+    if (isRetryable(e)) { clearTimeout(connectRetryTimer); connectRetryTimer = setTimeout(() => connect(true, true), 30000); }
   }
 }
+let connectRetryTimer = null;
 // Pick up changes made on another device when this tab comes back into view.
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !cloud.on || cloud.dirty || uploadsPending) return;
@@ -1451,10 +1497,10 @@ function setCloudMsg(t, bad){ const m = $('#cloud-msg'); m.textContent = t || ''
 function updateCloudUI(){
   const b = $('#cloud-btn');
   b.setAttribute('aria-pressed', cloud.on);
-  b.querySelector('.txt').textContent = uploadsPending ? `Cloud ↑${uploadsPending}` : 'Cloud';
+  b.querySelector('.txt').textContent = uploadsPending ? `Cloud ↑${uploadsPending}` : cloud.on && cloud.dirty ? 'Cloud •' : 'Cloud';
   b.title = cloud.on ? `Cloud sync on${cloud.savedAt ? ', last saved ' + new Date(cloud.savedAt).toLocaleString() : ''}` : 'Cloud sync off';
   $('#cloud-state').textContent = cloud.on
-    ? `Connected${cloud.savedAt ? ' · last saved ' + new Date(cloud.savedAt).toLocaleString() : ''}${uploadsPending ? ` · uploading ${uploadsPending} clip${uploadsPending > 1 ? 's' : ''}` : ''}`
+    ? `Connected${cloud.dirty ? ' · saving changes…' : cloud.savedAt ? ' · last saved ' + new Date(cloud.savedAt).toLocaleString() : ''}${uploadsPending ? ` · uploading ${uploadsPending} clip${uploadsPending > 1 ? 's' : ''}` : ''}`
     : cloud.pass ? 'Not connected' : 'Off';
   $('#cloud-off').hidden = !cloud.pass;
   $('#cloud-connect').textContent = cloud.on ? 'Sync now' : 'Connect';

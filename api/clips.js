@@ -1,11 +1,20 @@
 // /api/clips
 //   POST                 upload one audio file (raw body, Content-Type audio/*, X-File-Name header) → { path }
 //   GET   ?path=clips/…  stream one stored clip
-//   GET                  list stored clips
+//   GET                  list stored clips: { clips: [{ path, name, type, size, uploadedAt, inUse }] }
 //   DELETE ?path=clips/… delete one clip
+// The files live in Blob storage; when a database is connected every file is also recorded in deck_clips.
 import { Readable } from 'node:stream';
-import { put, get, list, del } from '@vercel/blob';
-import { ACCESS, MAX_CLIP_BYTES, authorize, send, readBody, fail } from './_lib.js';
+import { put, get, del } from '@vercel/blob';
+import { ACCESS, MAX_CLIP_BYTES, authorize, hasDb, send, readBody, fail } from './_lib.js';
+import { ensureSchema, recordClip, forgetClip, listClipRows } from './_db.js';
+import { listBlobClips, syncCatalog } from './_catalog.js';
+
+// Catalogue writes never fail the upload or delete itself; the catalogue resyncs from Blob storage later.
+async function catalog(fn) {
+  if (!hasDb()) return;
+  try { await ensureSchema(); await fn(); } catch (err) { console.error('Clip catalogue update failed', err); }
+}
 
 const AUDIO_EXT = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac', webm: 'audio/webm' };
 
@@ -35,6 +44,7 @@ export default async function handler(req, res) {
       const body = await readBody(req, MAX_CLIP_BYTES);
       if (!body.length) return send(res, 400, { error: 'The file is empty.' });
       const blob = await put(`clips/${name}`, body, { access: ACCESS, contentType: type, addRandomSuffix: true });
+      await catalog(() => recordClip({ path: blob.pathname, name, type, size: body.length }));
       return send(res, 201, { path: blob.pathname, size: body.length });
     }
 
@@ -53,20 +63,19 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      const clips = [];
-      let cursor;
-      do {
-        const page = await list({ prefix: 'clips/', cursor });
-        for (const b of page.blobs) clips.push({ path: b.pathname, size: b.size, uploadedAt: b.uploadedAt });
-        cursor = page.hasMore ? page.cursor : undefined;
-      } while (cursor);
-      return send(res, 200, { clips });
+      if (hasDb()) {
+        await syncCatalog();
+        return send(res, 200, { clips: await listClipRows() });
+      }
+      const blobs = await listBlobClips();
+      return send(res, 200, { clips: blobs.map(b => ({ path: b.pathname, size: b.size, uploadedAt: b.uploadedAt })) });
     }
 
     if (req.method === 'DELETE') {
       const path = clipPath(url.searchParams.get('path'));
       if (!path) return send(res, 400, { error: 'Not a clip path.' });
       await del(path);
+      await catalog(() => forgetClip(path));
       return send(res, 204);
     }
 

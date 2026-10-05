@@ -32,3 +32,13 @@ CREATE TABLE IF NOT EXISTS deck_settings (
   saved_at  timestamptz NOT NULL DEFAULT now(),
   tracker   jsonb                                  -- mission tracker: { config, game, templates }
 );
+
+-- Catalogue of uploaded audio files. The files live in Blob storage (clips/…); each key's clips column
+-- points at them by path. Kept in step on upload and delete, and resynced from Blob storage.
+CREATE TABLE IF NOT EXISTS deck_clips (
+  path          text        PRIMARY KEY,           -- Blob pathname, clips/…
+  name          text        NOT NULL,              -- file name as uploaded
+  content_type  text        NOT NULL DEFAULT '',
+  size          integer     NOT NULL DEFAULT 0,    -- bytes
+  uploaded_at   timestamptz NOT NULL DEFAULT now()
+);

@@ -51,7 +51,7 @@ All routes require the passcode in an `x-deck-pass` header.
 | `PUT /api/layout` | Save the board to the database (JSON body `{ pads, master }`, up to 500 keys) |
 | `POST /api/clips` | Upload one clip: raw audio body, `Content-Type: audio/*`, `X-File-Name` header → `{ path }` |
 | `GET /api/clips?path=clips/…` | Stream one clip |
-| `GET /api/clips` | List stored clips |
+| `GET /api/clips` | List stored clips from the catalogue, each with `inUse` (whether any key plays it) |
 | `DELETE /api/clips?path=clips/…` | Delete one clip |
 
 ## Install as an app
@@ -126,8 +126,26 @@ The tracker is saved in the browser (`rtsdeck.tracker`) and, when Cloud is conne
 
 ## Where your data lives
 
-- **In the browser:** clips in IndexedDB (database `rtsdeck`, store `clips`); the board in localStorage (`rtsdeck.v1`); the cloud passcode in localStorage (`rtsdeck.cloud`).
-- **In the cloud (when connected):** keys and mission tracker in the `deck_keys` and `deck_settings` tables of this project's Neon database; clips under `clips/…` in its Blob store.
+With Cloud connected, everything that describes your board is saved in the database, and the audio files in Blob storage:
+
+| Data | Where |
+|------|-------|
+| Keys: label, faction, sound (synth preset, spoken line or clips), hotkey, colour, volume, pitch, favourite, play mode, board order | `deck_keys` (one row per key) |
+| Which clips each key plays, in order | `deck_keys.clips` |
+| Master volume, last-saved time | `deck_settings` |
+| Mission tracker (paused): missions, saved missions, current game | `deck_settings.tracker` |
+| Every uploaded audio file: name, type, size, upload time | `deck_clips` (catalogue) |
+| The audio files themselves | Blob storage, `clips/…` |
+
+Kept on each device only, on purpose:
+
+- the Cloud passcode and sync bookkeeping (localStorage `rtsdeck.cloud`);
+- current filters and search, and the last view (they belong to the screen you're using);
+- a cache of the board (`rtsdeck.v1`, `rtsdeck.tracker`) and of the audio (IndexedDB `rtsdeck`), so playback is instant and the app works offline.
+
+**Saving is reliable:** changes are saved to the database within a second. If the network or server fails, saves retry on their own with growing waits (the Cloud button shows **Cloud •** until they land). Changes made offline are saved when the connection returns, a change made just before closing the tab is sent on the way out, and an app opened while the server is unreachable connects once it's back. Failed clip uploads are retried too. Clips over 4 MB stay on the device that added them.
+
+**The clip catalogue** (`deck_clips`) is updated on every upload and delete, and resynced with Blob storage (files added or removed outside the app are picked up). `GET /api/clips` lists every stored file with whether a key still uses it.
 
 ## About the sounds
 
